@@ -5,3 +5,4 @@ dist/
 *.log
 .DS_Store
 .proton-bridge-credentials
+.claude/settings.local.json
