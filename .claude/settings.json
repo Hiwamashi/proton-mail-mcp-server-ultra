@@ -1,6 +1,6 @@
 {
   "env": {
-    "ANTHROPIC_CUSTOM_HEADERS": "x-bf-lh-repo: local/proton-mcp-ultra"
+    "ANTHROPIC_CUSTOM_HEADERS": "x-bf-lh-repo: Hiwamashi/proton-mail-mcp-server-ultra"
   },
   "hooks": {
     "SessionStart": [

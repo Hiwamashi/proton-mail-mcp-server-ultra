@@ -1,9 +1,14 @@
 {
-  "name": "proton-mcp-ultra",
+  "name": "proton-mail-mcp-server-ultra",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Proton Mail MCP server via Proton Mail Bridge (IMAP/SMTP) – reading, attachments, drafts",
+  "description": "Proton Mail MCP server for local AI agents via Proton Mail Bridge (IMAP/SMTP) – reading, attachments, drafts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hiwamashi/proton-mail-mcp-server-ultra.git"
+  },
+  "homepage": "https://github.com/Hiwamashi/proton-mail-mcp-server-ultra#readme",
   "main": "dist/server.mjs",
   "scripts": {
     "build": "node build.mjs",
@@ -24,5 +29,6 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
-  }
+  },
+  "license": "MIT"
 }

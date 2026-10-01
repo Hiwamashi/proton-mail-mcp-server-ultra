@@ -2,10 +2,21 @@
 
 MCP-Server für Proton Mail über die Proton Mail Bridge (IMAP/SMTP): Mails lesen, Anhänge auslesen, Entwürfe anlegen und versenden (Node ≥ 20, ESM, `node:test`).
 
+Fork von [tamnys/proton-mail-mcp-server](https://github.com/tamnys/proton-mail-mcp-server), weiterentwickelt unter [Hiwamashi/proton-mail-mcp-server-ultra](https://github.com/Hiwamashi/proton-mail-mcp-server-ultra). Zielgruppe sind lokale KI-Agenten-Werkzeuge allgemein, nicht nur Claude.
+
+## Sprache der Dokumentation — Deutsch & Englisch
+
+- Jedes Dokument für Menschen (`README.md`, Dateien in `feature-documentation/`, `PROGRESS.md`, Changelogs, Anleitungen) erscheint **vollständig auf Deutsch und auf Englisch**.
+- Form: eine Datei mit zwei Abschnitten, **Deutsch zuerst, danach Englisch**. Oben stehen Sprunglinks auf beide Abschnitte. Beide Fassungen sind inhaltlich gleich, keine ist eine Kurzfassung der anderen.
+- Wird ein Dokument geändert, sind **beide** Sprachfassungen im selben Commit nachzuziehen. Eine Änderung nur in einer Sprache gilt als unvollständig.
+- Code, Bezeichner, Code-Kommentare, Commit-Messages und Tool-Beschreibungen des MCP-Servers bleiben Englisch.
+- Ausgenommen ist diese `CLAUDE.md`: Sie richtet sich an KI-Agenten und übernimmt die WRS-Regelblöcke wortgleich auf Deutsch.
+- Die Weiterentwicklung erfolgt KI-gestützt. Der Hinweis darauf in der README bleibt stehen.
+
 ## LLM-Gateway — Label-Pflicht
 
 > **Verbindlich, nicht abwählbar.** Jede Claude-Code-Session in diesem Projekt
-> trägt das Repo-Label `x-bf-lh-repo: local/proton-mcp-ultra`. Über dieses Label erfasst
+> trägt das Repo-Label `x-bf-lh-repo: Hiwamashi/proton-mail-mcp-server-ultra`. Über dieses Label erfasst
 > das WRS-LLM-Gateway (Bifrost) Token-Verbrauch und Kosten je Repository — ohne
 > Label ist die Nutzung dieses Projekts nicht zuordenbar. Ein separates
 > Token-Protokoll in der Codebase ist deshalb nicht nötig und wird nicht geführt.
@@ -25,7 +36,7 @@ für jeden, der das Repo klont:
 ```json
 {
   "env": {
-    "ANTHROPIC_CUSTOM_HEADERS": "x-bf-lh-repo: local/proton-mcp-ultra"
+    "ANTHROPIC_CUSTOM_HEADERS": "x-bf-lh-repo: Hiwamashi/proton-mail-mcp-server-ultra"
   }
 }
 ```
@@ -40,7 +51,7 @@ zum verbindlichen Teil:
   {
     "env": {
       "ANTHROPIC_BASE_URL": "<GATEWAY-URL>",
-      "ANTHROPIC_CUSTOM_HEADERS": "x-bf-lh-repo: local/proton-mcp-ultra"
+      "ANTHROPIC_CUSTOM_HEADERS": "x-bf-lh-repo: Hiwamashi/proton-mail-mcp-server-ultra"
     }
   }
   ```
