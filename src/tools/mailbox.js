@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { withImapClient, withMailbox, loadMessage, getSpecialFolder } from "../connections.js";
+import { withImapClient, withMailbox, loadMessage, loadAttachment, getSpecialFolder } from "../connections.js";
 import { messageCache } from "../message-cache.js";
 import { extractBody, stripQuoted, paginate, formatAddresses, describeAttachments, formatSize, formatDate } from "../content.js";
 import { attachmentToContent } from "../attachments.js";
@@ -32,7 +32,7 @@ function parseDate(value, name) {
 // Searches with more matches than this are sorted by UID instead of date.
 const MAX_SORT_CANDIDATES = 3000;
 
-function renderEmail({ uid, folder, parsed, flags, body, source, page, quotedRemoved }) {
+export function renderEmail({ uid, folder, parsed, flags, body, source, page, quotedRemoved }) {
   const attachments = describeAttachments(parsed.attachments);
   const lines = [
     `UID: ${uid} | Folder: ${folder} | Flags: ${flags.join(" ") || "-"}`,
@@ -200,7 +200,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
       // Decided before the mailbox is touched.
       if (markAsRead && !allowsMarkAsRead(mode)) throw new Error(MARK_AS_READ_REFUSAL);
       return withMailbox(folder, async (client) => {
-        const { parsed, flags } = await loadMessage(client, folder, uid);
+        const { parsed, flags } = await loadMessage(client, folder, uid, { allowPartial: true });
         let { body, source } = extractBody(parsed, { format, includeLinks });
         let quotedRemoved = false;
         if (strip && format !== "raw_html") ({ text: body, removed: quotedRemoved } = stripQuoted(body));
@@ -230,12 +230,16 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
       },
     },
     async ({ uid, folder, index, save, offset, maxChars }) => {
-      const { parsed } = await withMailbox(folder, (client) => loadMessage(client, folder, uid));
-      const attachment = parsed.attachments?.[index];
-      if (!attachment) {
-        const count = parsed.attachments?.length || 0;
-        throw new Error(`Email UID ${uid} has ${count} attachment(s); index ${index} does not exist.`);
-      }
+      // The part is downloaded while the folder is locked; converting it needs no connection.
+      const attachment = await withMailbox(folder, async (client) => {
+        const loaded = await loadMessage(client, folder, uid, { allowPartial: true });
+        const found = await loadAttachment(client, uid, loaded, index);
+        if (!found) {
+          const count = loaded.parsed.attachments?.length || 0;
+          throw new Error(`Email UID ${uid} has ${count} attachment(s); index ${index} does not exist.`);
+        }
+        return found;
+      });
       return { content: await attachmentToContent(attachment, { uid, index, offset, maxChars, save }) };
     }
   );

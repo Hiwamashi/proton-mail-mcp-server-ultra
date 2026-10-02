@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { simpleParser } from "mailparser";
 import { CONFIG } from "./config.js";
 import { messageCache } from "./message-cache.js";
+import { loadPartially, downloadPart } from "./partial-fetch.js";
 
 // The IMAP connection is reused across tool calls and closed after an idle period.
 // A stale Bridge connection gets exactly one reconnect attempt – but only for operations that
@@ -144,8 +145,7 @@ function notFound(uid, folder) {
   return new NotFoundError(`No message with UID ${uid} in folder "${folder}". UIDs are per folder – check the folder name.`);
 }
 
-// Full path: download the whole source and parse it. A future partial-download path (large messages)
-// plugs in at the strategy choice in loadMessage; it must return the same { parsed, flags } shape.
+// Full path: download the whole source and parse it.
 // skipImageLinks keeps cid: references intact, so re-saved drafts still match their inline parts.
 async function loadFull(client, folder, uid) {
   const message = await client.fetchOne(`${uid}`, { source: true, uid: true, flags: true }, { uid: true });
@@ -154,24 +154,56 @@ async function loadFull(client, folder, uid) {
   return { parsed, flags: [...(message.flags || [])], bytes: message.source.length };
 }
 
+// Part-wise path for messages above CONFIG.partialFetchBytes: only headers and body parts are
+// downloaded. Returns null when the message is small or its structure is not safe to handle part by
+// part – the caller then uses the full path. The attachments of the result have no content;
+// `partial.parts[i]` is the IMAP part to download for attachment i (see loadAttachment).
+async function loadPartial(client, folder, uid) {
+  const info = await client.fetchOne(`${uid}`, { uid: true, flags: true, size: true, bodyStructure: true }, { uid: true });
+  if (!info) throw notFound(uid, folder);
+  if (!(info.size > CONFIG.partialFetchBytes) || !info.bodyStructure) return null;
+  const loaded = await loadPartially(client, uid, info.bodyStructure);
+  return loaded && { ...loaded, flags: [...(info.flags || [])] };
+}
+
 // Loads one message for every tool. The client must already have `folder` selected and locked.
 // The parsed message comes from the cache when possible; flags are always fetched fresh, since they
 // change without the content changing. imapflow fetches the source with BODY.PEEK, so reading does
-// not set \Seen. Returns { parsed, flags } – `parsed` may be shared with the cache, do not mutate it.
-export async function loadMessage(client, folder, uid) {
+// not set \Seen. Returns { parsed, flags, partial } – `parsed` may be shared with the cache, do not mutate it.
+//
+// Only callers that merely read or display the message pass allowPartial: true (read_email,
+// get_attachment). For large messages they get `partial` set and attachments without content;
+// everything that rebuilds or re-sends a message (drafts, replies) takes the full path and never sees
+// a partially loaded entry.
+export async function loadMessage(client, folder, uid, { allowPartial = false } = {}) {
   const uidValidity = client.mailbox?.uidValidity;
   const cached = messageCache.get(folder, uidValidity, uid);
-  if (cached) {
+  if (cached && (allowPartial || !cached.partial)) {
     const message = await client.fetchOne(`${uid}`, { flags: true, uid: true }, { uid: true });
     if (!message) {
       messageCache.invalidate(folder, uid);
       throw notFound(uid, folder);
     }
-    return { parsed: cached.parsed, flags: [...(message.flags || [])] };
+    return { parsed: cached.parsed, flags: [...(message.flags || [])], partial: cached.partial };
+  }
+  const partial = allowPartial ? await loadPartial(client, folder, uid) : null;
+  if (partial) {
+    messageCache.set(folder, uidValidity, uid, { parsed: partial.parsed, partial: partial.partial }, partial.bytes);
+    return { parsed: partial.parsed, flags: partial.flags, partial: partial.partial };
   }
   const { parsed, flags, bytes } = await loadFull(client, folder, uid);
   messageCache.set(folder, uidValidity, uid, { parsed }, bytes);
   return { parsed, flags };
+}
+
+// Returns attachment `index` of a message from loadMessage, with its content. For part-wise loaded
+// messages only that one part is downloaded (not cached). Returns undefined for an unknown index.
+export async function loadAttachment(client, uid, loaded, index) {
+  const attachment = loaded.parsed.attachments?.[index];
+  if (!attachment || !loaded.partial) return attachment;
+  const content = await downloadPart(client, uid, loaded.partial.parts[index]);
+  if (!content) throw new Error(`Could not download attachment ${index} of UID ${uid}.`);
+  return { ...attachment, content, size: content.length };
 }
 
 let specialFolderCache = null;

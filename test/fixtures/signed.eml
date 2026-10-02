@@ -1,0 +1,80 @@
+From: =?UTF-8?Q?J=C3=BCrgen_M=C3=BCller?= <juergen@example.com>
+To: Anna Beispiel <anna@example.com>, "Doe, John" <john@example.com>
+Cc: team@example.com
+Subject: Signierte Mail
+Date: Tue, 06 Oct 2026 09:15:00 +0200
+Message-ID: <fixture-14@example.com>
+In-Reply-To: <prev@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/signed; protocol="application/pkcs7-signature"; micalg=sha-256; boundary="SIG"
+
+--SIG
+Content-Type: multipart/mixed; boundary="BODY"
+
+--BODY
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 7bit
+
+Signed message body.
+--BODY
+Content-Type: application/pdf; name="Angebot.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="Angebot.pdf"
+
+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
+C2x8OsN62/PU+1nFoVQ=
+--BODY--
+--SIG
+Content-Type: application/pkcs7-signature; name="smime.p7s"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="smime.p7s"
+
+hdik4r81iRMej7odJua/bOFlallWx7WQpHtyvR1+ZmU5hL9+gxA6s5ZC+Q8a8db3k0Gojbit1ox+
+WBkWhfTVR7IosiQwlB2nIH+wI+PazukxEMwPX6aqKc//VqxoiX2szIJi/4jAX5CG+dIiS3U6mbiI
+nWME/YTinLo3Soznte2sSq5Xxj07YSvSM1TUMGuUR8bfOWgMWPFPFvnodg1bf9pVUpVRtBWtH/eW
+eS1pontUxCifsT2HU/h2VQkjAMIiSoFngGaKxDXf+HdmLrY2JkLUagSsjrM8O3SRjL8Xm4dLUF4f
+9WxIWY5s+lJ4yatJYZKd/doQLKVONKuVxiL5sqagUMX/fw77It5lC/rzBY0H7w0t9dzDr30JLdik
+j6OHM7iTiRlp8RZ9MDtGBy2fi31SrFdXvLUH+VLVJdj5QDJ6p6UeD80XZ7HrbbrrGvdXSQMs+0b0
+KjQKuSORF6felDCxhRR2JcHhZJJ3luYUN9X1wNxcuyuAkiMssdQ2t4q2yF+721/ww/S81DVEyje8
+kCx/IcyNn+e12kXxr3ykRR3PU7MgraeiwBVZwYNRWvz3C3py+NC1EPgLP+V6ynMgmhGRZKdObQog
+I7AgLFroEAzPHMTlqu++67474N2slhN7PnBnJgqYamwz/zDR7lngoD3DAX8K4MfhgFbTlIQO+Fkz
+vOsZXHfVbETXa330NwfR2SgWigNvtg4IYZKz5P3G4GMiJjwRHysNkKz8bLSlfL6qGwvgcoOfJH2B
+ZBZ5+w+/PJkj2xwzetEHshUbpnugSK8iPo4MvVeOZlg5GXhevEzd0VWrG8TAMn3d0aXaYTKJvDL9
+jxj10deNylCBvdEYQVnzj0FXZd1vzSYLHchEpGOz1UeDl3ohPE4I++ZeqJPVfo6Qb839qbtH1NO8
+32kgkTm4Ejxfuegg6zlsyf0mWpO/xt6YsQNHQY1HFfM4ubJLUAHROWUSTGes8Sd4YbdY0znEPIcn
+qXpoT6bMmf6iYH/XILoh42R17PLOIajEwzreblzP5GK/MgV0ANY/
+--SIG--

@@ -9,8 +9,8 @@
 
 ## 2. Partial download
 
-- [ ] 2.1 Implement body and attachment list from BODYSTRUCTURE following mailparser's numbering rules, with fallback to the full path for encrypted or unknown structures; verify with fixtures (nested multipart, related images, rfc822 attachment, HTML-only, signed mail) that both paths yield identical attachment lists and bodies
-- [ ] 2.2 Use the partial path in `read_email` and `get_attachment` above the threshold; verify with a fake client that attachment parts are not downloaded by `read_email`
+- [x] 2.1 Implement body and attachment list from BODYSTRUCTURE following mailparser's numbering rules, with fallback to the full path for encrypted or unknown structures; verify with fixtures (nested multipart, related images, rfc822 attachment, HTML-only, signed mail) that both paths yield identical attachment lists and bodies
+- [x] 2.2 Use the partial path in `read_email` and `get_attachment` above the threshold; verify with a fake client that attachment parts are not downloaded by `read_email`
 - [ ] 2.3 Measure with `scripts/smoke.mjs` against a large real message and record before/after timings in the PR description
 
 ## 3. Inline image limit
