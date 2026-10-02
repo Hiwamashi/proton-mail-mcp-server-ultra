@@ -2,9 +2,8 @@ import { z } from "zod";
 import { withImapClient, withMailbox, fetchParsed, getSpecialFolder } from "../connections.js";
 import { extractBody, stripQuoted, paginate, formatAddresses, describeAttachments, formatSize, formatDate } from "../content.js";
 import { attachmentToContent } from "../attachments.js";
-import { CONFIG } from "../config.js";
+import { CONFIG, MODES } from "../config.js";
 import {
-  ALL_MODES,
   DRAFT_MODES,
   allowsMarkAsRead,
   allowsPermanentDelete,
@@ -69,7 +68,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
   define(
     "list_folders",
     {
-      modes: ALL_MODES,
+      modes: MODES,
       description: "List all mailbox folders with their special use (\\Inbox, \\Sent, \\Drafts, \\Trash, ...) and message counts.",
       inputSchema: {},
     },
@@ -90,7 +89,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
   define(
     "list_emails",
     {
-      modes: ALL_MODES,
+      modes: MODES,
       description:
         "List the newest emails in a folder, newest first. Returns UID, date, from, to, subject, read/flag state and whether there are attachments. Use offset to page further back.",
       inputSchema: {
@@ -116,7 +115,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
   define(
     "search_emails",
     {
-      modes: ALL_MODES,
+      modes: MODES,
       description:
         "Search a folder; results are sorted newest first. All criteria are combined with AND. Tip: search folder \"All Mail\" to search everything at once.",
       inputSchema: {
@@ -180,7 +179,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
   define(
     "read_email",
     {
-      modes: ALL_MODES,
+      modes: MODES,
       description: readEmailDescription(mode),
       inputSchema: {
         uid: z.number().int().describe("UID of the email"),
@@ -217,7 +216,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
   define(
     "get_attachment",
     {
-      modes: ALL_MODES,
+      modes: MODES,
       description:
         "Open an attachment of an email by its index from read_email. PDFs and text files are returned as text, images are shown directly, attached emails are rendered. Other files (Office documents, archives, ...) are saved to the local attachment folder and the path is returned.",
       inputSchema: {

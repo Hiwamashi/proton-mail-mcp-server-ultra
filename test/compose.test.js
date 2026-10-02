@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { replyRecipients, replySubject, referencesFor, quoteText, buildRawMessage } from "../src/compose.js";
+import { replyRecipients, replySubject, referencesFor, quoteText, buildRawMessage, assertIsDraft } from "../src/compose.js";
 
 const addr = (...list) => ({ value: list.map(([name, address]) => ({ name, address })) });
 const SELF = ["me@proton.me"];
@@ -47,4 +47,12 @@ test("draft build keeps Bcc header only when asked", async () => {
   const options = { from: "me@proton.me", to: "a@x.de", bcc: "secret@x.de", subject: "S", text: "T" };
   assert.match((await buildRawMessage(options, { keepBcc: true })).toString(), /^Bcc: secret@x\.de/m);
   assert.doesNotMatch((await buildRawMessage(options)).toString(), /^Bcc:/m);
+});
+
+test("assertIsDraft accepts a message with the \\Draft flag and refuses one without", () => {
+  assert.doesNotThrow(() => assertIsDraft(["\\Seen", "\\Draft"], 7));
+  assert.doesNotThrow(() => assertIsDraft(new Set(["\\Draft"]), 7));
+  assert.throws(() => assertIsDraft(["\\Seen"], 7), /UID 7 in Drafts is not a draft/);
+  assert.throws(() => assertIsDraft([], 7), /not a draft/);
+  assert.throws(() => assertIsDraft(undefined, 7), /not a draft/);
 });

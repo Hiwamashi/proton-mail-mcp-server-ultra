@@ -73,8 +73,31 @@ test("refuses relative paths", async () => {
   await assert.rejects(assertAttachable("Documents/Angebot.pdf", [docs], home), /absolute/);
 });
 
-test("missing file keeps the not found error", async () => {
-  await assert.rejects(assertAttachable(join(docs, "nope.pdf"), [docs], home), /not found/);
+test("a missing file gets the same refusal text as a refused path (no existence oracle)", async () => {
+  const messageFor = async (path) => {
+    try {
+      await assertAttachable(path, [docs], home);
+    } catch (err) {
+      return err.message.replace(path, "<path>");
+    }
+    throw new Error("expected a refusal");
+  };
+  const missing = await messageFor(join(docs, "nope.pdf"));
+  const refused = await messageFor(join(outside, "report.csv"));
+  assert.match(missing, /refused/);
+  assert.doesNotMatch(missing, /not found/i);
+  assert.equal(missing, refused);
+});
+
+test("refusal lists only the roots in effect, or none", async () => {
+  const target = join(outside, "report.csv");
+  const realDocs = await realpath(docs);
+  await assert.rejects(assertAttachable(target, [join(base, "missing"), "docs", docs], home), (err) => {
+    assert.ok(err.message.includes(`Allowed directories: ${realDocs}.`));
+    assert.ok(!err.message.includes("missing"));
+    return true;
+  });
+  await assert.rejects(assertAttachable(target, [join(base, "missing")], home), /Allowed directories: none\./);
 });
 
 test("error names the path, the allowed directories and the variable", async () => {

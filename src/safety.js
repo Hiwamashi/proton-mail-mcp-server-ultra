@@ -50,24 +50,28 @@ export async function assertAttachable(path, roots = CONFIG.attachmentRoots, hom
     throw new Error(`Attachment path must be absolute: ${path}`);
   }
 
+  // The refusal lists the roots actually in effect (relative/missing ones are dropped).
+  const effective = roots === "*" ? roots : await resolveRoots(roots);
+
+  // A missing file gets the same refusal as a refused path, so the error is no existence oracle.
   let real;
   let info;
   try {
     real = await realpath(expanded);
     info = await stat(real);
   } catch {
-    throw new Error(`Attachment file not found: ${path}`);
+    throw refusal(path, effective);
   }
-  if (!info.isFile()) throw refusal(path, roots);
+  if (!info.isFile()) throw refusal(path, effective);
 
-  if (roots === "*") {
-    if (hasHiddenSegment(real)) throw refusal(path, roots);
+  if (effective === "*") {
+    if (hasHiddenSegment(real)) throw refusal(path, effective);
     return real;
   }
 
-  for (const root of await resolveRoots(roots)) {
+  for (const root of effective) {
     const prefix = root.endsWith(sep) ? root : root + sep;
     if (real.startsWith(prefix) && !hasHiddenSegment(real.slice(prefix.length))) return real;
   }
-  throw refusal(path, roots);
+  throw refusal(path, effective);
 }

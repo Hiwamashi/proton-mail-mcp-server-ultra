@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { basename } from "node:path";
 import { homedir } from "node:os";
-import { CONFIG, expandHome } from "../config.js";
+import { CONFIG, MODES, expandHome } from "../config.js";
 import { assertAttachable } from "../safety.js";
 import { withImapClient, withMailbox, fetchParsed, getSpecialFolder, sendMail } from "../connections.js";
 import { extractBody, addressObjects, formatAddress } from "../content.js";
@@ -15,8 +15,9 @@ import {
   textToHtml,
   buildRawMessage,
   splitAddresses,
+  assertIsDraft,
 } from "../compose.js";
-import { FULL_ONLY, DRAFT_MODES, ALL_MODES, draftHint } from "../modes.js";
+import { FULL_ONLY, DRAFT_MODES, draftHint } from "../modes.js";
 import { defineTool, text, summarize, SUMMARY_FETCH } from "./util.js";
 
 const recipientsArg = (what) => z.string().optional().describe(`${what} recipients, comma-separated`);
@@ -246,7 +247,7 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
   define(
     "list_drafts",
     {
-      modes: ALL_MODES,
+      modes: MODES,
       description: "List saved drafts, newest first.",
       inputSchema: {
         limit: z.number().int().min(1).max(100).default(20).describe("Number of drafts (default 20)"),
@@ -282,7 +283,8 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
       },
     },
     async ({ uid, to, cc, bcc, subject, body, html, addAttachments, removeAttachments }) => {
-      const { parsed } = await withDraftsFolder((client, drafts) => fetchParsed(client, uid, drafts));
+      const { parsed, flags } = await withDraftsFolder((client, drafts) => fetchParsed(client, uid, drafts));
+      assertIsDraft(flags, uid);
       const newAttachments = await fileAttachments(addAttachments);
 
       // A new body without new HTML: the HTML part is regenerated from the text, so its inline
@@ -375,7 +377,8 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
     },
     async ({ uid }) =>
       withDraftsFolder(async (client, drafts) => {
-        const { parsed } = await fetchParsed(client, uid, drafts);
+        const { parsed, flags } = await fetchParsed(client, uid, drafts);
+        assertIsDraft(flags, uid);
         await client.messageDelete(`${uid}`, { uid: true });
         return text({ success: true, deletedUid: uid, subject: parsed.subject || "" });
       }, WRITE)

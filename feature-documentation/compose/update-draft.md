@@ -44,9 +44,11 @@ MCP-Text-Block:
   inReplyTo: "<original-id@example.com>",
   attachments: ["file1.pdf"],
   replacedUid: 105,  // alte UID
-  hint: "...",
+  hint: "The draft is visible in Proton Mail under Drafts. Use send_draft to send it or update_draft to change it.",
 }
 ```
+
+Der `hint` hängt vom Modus ab (`draftHint(mode)` in `src/modes.js`): Das Beispiel zeigt `full`. In `drafts` lautet er: `The draft is visible in Proton Mail under Drafts. Use update_draft to change it. The user reviews and sends the draft in Proton Mail.`
 
 Falls die alte UID gelöscht werden konnte:
 ```javascript
@@ -62,6 +64,10 @@ Falls Löschen der alten Entwurf-UID fehlschlägt:
 ```
 
 ## Verhalten
+
+### Nur echte Entwürfe
+
+Bevor etwas angehängt oder gelöscht wird, prüft das Tool über `assertIsDraft(flags, uid)` (`src/compose.js`), ob die Nachricht das Flag `\Draft` trägt. Eine Nachricht im Drafts-Ordner ohne dieses Flag (etwa eine mit `move_email` hineinverschobene Mail) ist kein Entwurf: Fehler `Message UID <uid> in Drafts is not a draft (it has no \Draft flag), so it is left untouched.`, es wird nichts angelegt oder gelöscht. Das gilt in jedem Modus.
 
 ### Append-then-Delete-Strategie
 
@@ -94,7 +100,7 @@ Falls `body` oder `html` neu, werden alte Inline-Bilder (nur im alten HTML refer
 
 Falls Entwurf-UID nicht existiert: IMAP-Fehler.
 
-Falls Anhang-Datei nicht existiert: `Error: Attachment file not found: ...`
+Falls Anhang-Datei nicht existiert: `Error: Attachment refused: ...` (dieselbe Ablehnung wie bei einem nicht erlaubten Pfad)
 
 Falls ein neuer Anhang außerhalb der erlaubten Verzeichnisse liegt oder versteckt ist: `Error: Attachment refused: ...`. Der Entwurf bleibt unverändert, es wird kein neuer angelegt.
 
@@ -144,9 +150,11 @@ MCP text block:
   inReplyTo: "<original-id@example.com>",
   attachments: ["file1.pdf"],
   replacedUid: 105,  // old UID
-  hint: "...",
+  hint: "The draft is visible in Proton Mail under Drafts. Use send_draft to send it or update_draft to change it.",
 }
 ```
+
+The `hint` depends on the mode (`draftHint(mode)` in `src/modes.js`): the example shows `full`. In `drafts` it reads: `The draft is visible in Proton Mail under Drafts. Use update_draft to change it. The user reviews and sends the draft in Proton Mail.`
 
 If old draft UID was deleted:
 ```javascript
@@ -162,6 +170,10 @@ If deleting old draft UID fails:
 ```
 
 ## Behavior
+
+### Real drafts only
+
+Before anything is appended or deleted, the tool calls `assertIsDraft(flags, uid)` (`src/compose.js`) to check that the message carries the `\Draft` flag. A message in the Drafts folder without it (for example an email moved in with `move_email`) is not a draft: error `Message UID <uid> in Drafts is not a draft (it has no \Draft flag), so it is left untouched.`, nothing is created or deleted. This applies in every mode.
 
 ### Append-then-delete strategy
 
@@ -194,7 +206,7 @@ If `body` or `html` is new, old inline images (referenced only in old HTML) are 
 
 If draft UID does not exist: IMAP error.
 
-If attachment file does not exist: `Error: Attachment file not found: ...`
+If attachment file does not exist: `Error: Attachment refused: ...` (same refusal as for a path that is not allowed)
 
 If a new attachment is outside the allowed directories or hidden: `Error: Attachment refused: ...`. The draft stays unchanged, no new one is created.
 

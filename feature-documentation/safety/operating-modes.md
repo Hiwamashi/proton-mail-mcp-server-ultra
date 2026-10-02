@@ -19,7 +19,7 @@ Variable `PROTON_MCP_MODE` (Umgebung oder `~/.proton-bridge-credentials`, siehe 
 | Wert | Bedeutung |
 |---|---|
 | `read-only` | Nur Lesen. Keine Änderung am Postfach. |
-| `drafts` (**Standard**) | Lesen, Entwürfe anlegen und ändern, Postfach ordnen. Kein Senden, kein endgültiges Löschen. |
+| `drafts` (**Standard**) | Lesen, Entwürfe anlegen und ändern, Postfach ordnen. Kein Senden, kein endgültiges Löschen aus dem Papierkorb. Entwürfe lassen sich weiterhin löschen (`delete_draft`) und werden von `update_draft` ersetzt. |
 | `full` | Alle Tools, auch Senden und endgültiges Löschen. |
 
 Ein leerer oder fehlender Wert ergibt `drafts`. Ein ungültiger Wert beendet den Server beim Start mit Exit-Code 1 und einer Meldung, die alle gültigen Werte nennt. Beim Start schreibt der Server den aktiven Modus und die erlaubten Anhang-Verzeichnisse nach stderr (stdout gehört dem MCP-Kanal).
@@ -57,7 +57,7 @@ Zwei Verhaltensunterschiede innerhalb eines Tools:
 
 ## Umsetzung
 
-`defineTool(server, name, { modes, ...config }, handler, mode)` in `src/tools/util.js` registriert ein Tool nur, wenn `toolAvailable(modes, mode)` wahr ist. Die Listen `ALL_MODES`, `DRAFT_MODES` und `FULL_ONLY` stehen in `src/modes.js`. Die Modus-Zuordnung steht direkt an jeder Tool-Definition in `src/tools/mailbox.js` und `src/tools/compose.js`. Die Registrierfunktionen `registerMailboxTools` und `registerComposeTools` nehmen `mode` als Option (Standard `CONFIG.mode`), damit Tests jeden Modus prüfen können.
+`defineTool(server, name, { modes, ...config }, handler, mode)` in `src/tools/util.js` registriert ein Tool nur, wenn `toolAvailable(modes, mode)` wahr ist. Die Listen `DRAFT_MODES` und `FULL_ONLY` stehen in `src/modes.js`, die Liste aller Modi (`MODES`) in `src/config.js`. Fehlt `modes` an einer Tool-Definition, wirft `defineTool` einen Fehler (kein stilles „alle Modi“). Die Modus-Zuordnung steht direkt an jeder Tool-Definition in `src/tools/mailbox.js` und `src/tools/compose.js`. Die Registrierfunktionen `registerMailboxTools` und `registerComposeTools` nehmen `mode` als Option (Standard `CONFIG.mode`), damit Tests jeden Modus prüfen können.
 
 Neue Tools müssen `modes` setzen. Ohne `modes` gilt ein Tool in allen Modi.
 
@@ -118,7 +118,7 @@ Der Client erhält den Text im `initialize`-Ergebnis. Er ersetzt keine Prüfung 
 
 ## Migration
 
-Vor dieser Änderung waren alle Tools immer verfügbar. Wer Senden braucht, setzt `PROTON_MCP_MODE=full`. Wer zusätzlich Anhänge aus beliebigen Ordnern braucht, setzt `PROTON_MCP_ATTACHMENT_ROOTS=*` (siehe `attachment-roots.md`).
+Vor dieser Änderung waren alle Tools immer verfügbar. Wer Senden braucht, setzt `PROTON_MCP_MODE=full`. Wer zusätzlich Anhänge aus beliebigen Ordnern braucht, setzt `PROTON_MCP_ATTACHMENT_ROOTS=*` (siehe `attachment-roots.md`). Auch mit `*` bleiben versteckte Pfade und Nicht-Dateien abgelehnt.
 
 ---
 
@@ -139,7 +139,7 @@ Variable `PROTON_MCP_MODE` (environment or `~/.proton-bridge-credentials`, see `
 | Value | Meaning |
 |---|---|
 | `read-only` | Reading only. No change to the mailbox. |
-| `drafts` (**default**) | Read, create and change drafts, organize the mailbox. No sending, no permanent deletion. |
+| `drafts` (**default**) | Read, create and change drafts, organize the mailbox. No sending, no permanent deletion from Trash. Drafts can still be deleted (`delete_draft`) and are replaced by `update_draft`. |
 | `full` | All tools, including sending and permanent deletion. |
 
 An empty or missing value results in `drafts`. An invalid value terminates the server at startup with exit code 1 and a message listing all valid values. At startup the server writes the active mode and the allowed attachment directories to stderr (stdout belongs to the MCP channel).
@@ -177,7 +177,7 @@ Two behavior differences inside a tool:
 
 ## Implementation
 
-`defineTool(server, name, { modes, ...config }, handler, mode)` in `src/tools/util.js` registers a tool only if `toolAvailable(modes, mode)` is true. The lists `ALL_MODES`, `DRAFT_MODES` and `FULL_ONLY` live in `src/modes.js`. The mode assignment sits right at each tool definition in `src/tools/mailbox.js` and `src/tools/compose.js`. The registration functions `registerMailboxTools` and `registerComposeTools` take `mode` as an option (default `CONFIG.mode`) so tests can check every mode.
+`defineTool(server, name, { modes, ...config }, handler, mode)` in `src/tools/util.js` registers a tool only if `toolAvailable(modes, mode)` is true. The lists `DRAFT_MODES` and `FULL_ONLY` live in `src/modes.js`, the list of all modes (`MODES`) in `src/config.js`. If a tool definition has no `modes`, `defineTool` throws (no silent "all modes"). The mode assignment sits right at each tool definition in `src/tools/mailbox.js` and `src/tools/compose.js`. The registration functions `registerMailboxTools` and `registerComposeTools` take `mode` as an option (default `CONFIG.mode`) so tests can check every mode.
 
 New tools must set `modes`. Without `modes`, a tool is available in all modes.
 
@@ -238,4 +238,4 @@ The client receives the text in the `initialize` result. It does not replace any
 
 ## Migration
 
-Before this change all tools were always available. Anyone who needs sending sets `PROTON_MCP_MODE=full`. Anyone who also needs attachments from arbitrary folders sets `PROTON_MCP_ATTACHMENT_ROOTS=*` (see `attachment-roots.md`).
+Before this change all tools were always available. Anyone who needs sending sets `PROTON_MCP_MODE=full`. Anyone who also needs attachments from arbitrary folders sets `PROTON_MCP_ATTACHMENT_ROOTS=*` (see `attachment-roots.md`). Even with `*`, hidden paths and non-regular files stay refused.

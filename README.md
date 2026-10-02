@@ -11,7 +11,7 @@ MCP-Server für Proton Mail über die **Proton Mail Bridge** (IMAP/SMTP). Er gib
 > **Breaking change: sicherer Standard.**
 > - **Senden braucht jetzt `PROTON_MCP_MODE=full`.** Im neuen Standardmodus `drafts` gibt es `send_email`, `reply_to_email` und `send_draft` nicht; Agenten legen Entwürfe an, du sendest sie in Proton Mail. Endgültiges Löschen aus dem Papierkorb gibt es ebenfalls nur in `full`.
 > - **Anhänge nur aus erlaubten Verzeichnissen.** Standard: `~/Downloads`, `~/Documents`, `~/Desktop` und der Anhang-Ordner. Versteckte Dateien und Ordner (`.ssh`, `.env`) werden immer abgelehnt.
-> - **Altes Verhalten wiederherstellen:** `PROTON_MCP_MODE=full` und `PROTON_MCP_ATTACHMENT_ROOTS=*` setzen (siehe [Betriebsmodi](#betriebsmodi) und [Aktualisieren](#8-aktualisieren)).
+> - **Altes Verhalten wiederherstellen:** `PROTON_MCP_MODE=full` und `PROTON_MCP_ATTACHMENT_ROOTS=*` setzen (siehe [Betriebsmodi](#betriebsmodi) und [Aktualisieren](#8-aktualisieren)). Auch mit `*` bleiben versteckte Pfade (etwa `~/.config`, `~/.ssh`) und Nicht-Dateien wie Verzeichnisse abgelehnt; das lässt sich nicht abschalten.
 
 ### Warum es dieses Projekt gibt
 
@@ -60,7 +60,7 @@ UIDs gelten nur innerhalb ihres Ordners. Eine Mail, die `search_emails` in „Al
 | Modus | Tools | Zweck |
 |---|---|---|
 | `read-only` | 6: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_attachment`, `list_drafts` | Nichts ändert sich im Postfach, auch kein „gelesen“-Flag. Für Prüfungen und gemeinsam genutzte Rechner. |
-| `drafts` (**Standard**) | 12: wie `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | Der Agent bereitet vor, du sendest in Proton Mail. Kein Senden, kein endgültiges Löschen. |
+| `drafts` (**Standard**) | 12: wie `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | Der Agent bereitet vor, du sendest in Proton Mail. Kein Senden, kein endgültiges Löschen aus dem Papierkorb; Entwürfe lassen sich weiterhin löschen (`delete_draft`) und werden von `update_draft` ersetzt. |
 | `full` | 15: alle, zusätzlich `send_email`, `reply_to_email`, `send_draft` | Senden und endgültiges Löschen. Nur für Agenten, denen du vertraust, am besten mit Rückfrage des Clients vor jedem Senden. |
 
 Ein ungültiger Wert beendet den Start mit einer Fehlermeldung, die die gültigen Werte nennt.
@@ -75,6 +75,8 @@ Vor dieser Änderung waren alle Tools immer verfügbar und Anhänge von jedem Pf
 PROTON_MCP_MODE=full
 PROTON_MCP_ATTACHMENT_ROOTS=*
 ```
+
+`*` stellt das alte Verhalten nicht vollständig wieder her: Versteckte Pfade (etwa `~/.config`, `~/.ssh`) und Nicht-Dateien bleiben abgelehnt.
 
 Meist reicht weniger: `PROTON_MCP_MODE=full` nur, wenn der Agent wirklich senden soll, und `PROTON_MCP_ATTACHMENT_ROOTS` um die Ordner erweitern, aus denen du Anhänge brauchst. Wie man die Variablen an den Server übergibt, steht in Schritt 6.
 
@@ -277,7 +279,7 @@ MCP server for Proton Mail via the **Proton Mail Bridge** (IMAP/SMTP). It gives 
 > **Breaking change: safe by default.**
 > - **Sending now needs `PROTON_MCP_MODE=full`.** In the new default mode `drafts`, `send_email`, `reply_to_email` and `send_draft` do not exist; agents create drafts and you send them in Proton Mail. Permanent deletion from Trash is also available only in `full`.
 > - **Attachments only from allowed directories.** Default: `~/Downloads`, `~/Documents`, `~/Desktop` and the attachment folder. Hidden files and folders (`.ssh`, `.env`) are always refused.
-> - **Restore the old behavior:** set `PROTON_MCP_MODE=full` and `PROTON_MCP_ATTACHMENT_ROOTS=*` (see [Operating modes](#operating-modes) and [Update](#8-update)).
+> - **Restore the old behavior:** set `PROTON_MCP_MODE=full` and `PROTON_MCP_ATTACHMENT_ROOTS=*` (see [Operating modes](#operating-modes) and [Update](#8-update)). Even with `*`, hidden paths (such as `~/.config`, `~/.ssh`) and non-regular files such as directories stay refused; this cannot be turned off.
 
 ### Why this project exists
 
@@ -326,7 +328,7 @@ UIDs are only valid within their folder. A message found by `search_emails` in "
 | Mode | Tools | Purpose |
 |---|---|---|
 | `read-only` | 6: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_attachment`, `list_drafts` | Nothing changes in the mailbox, not even the "read" flag. For audits and shared machines. |
-| `drafts` (**default**) | 12: as `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | The agent prepares, you send in Proton Mail. No sending, no permanent deletion. |
+| `drafts` (**default**) | 12: as `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | The agent prepares, you send in Proton Mail. No sending, no permanent deletion from Trash; drafts can still be deleted (`delete_draft`) and are replaced by `update_draft`. |
 | `full` | 15: all, additionally `send_email`, `reply_to_email`, `send_draft` | Sending and permanent deletion. Only for agents you trust, ideally with a client confirmation before every send. |
 
 An invalid value aborts startup with an error message that names the valid values.
@@ -341,6 +343,8 @@ Before this change all tools were always available and attachments could come fr
 PROTON_MCP_MODE=full
 PROTON_MCP_ATTACHMENT_ROOTS=*
 ```
+
+`*` does not fully restore the old behavior: hidden paths (such as `~/.config`, `~/.ssh`) and non-regular files stay refused.
 
 Usually less is enough: set `PROTON_MCP_MODE=full` only if the agent really needs to send, and extend `PROTON_MCP_ATTACHMENT_ROOTS` with the folders you attach from. How to pass the variables to the server is described in step 6.
 

@@ -89,7 +89,7 @@ Error: No message with UID 999 in folder "INBOX".
 
 Falls kein Ordner zum Speichern gefunden wird: IMAP-Fehler.
 
-Falls Anhang nicht existiert: `Error: Attachment file not found: ...`
+Falls Anhang nicht existiert: `Error: Attachment refused: ...` (dieselbe Ablehnung wie bei einem nicht erlaubten Pfad)
 
 Falls Anhang außerhalb der erlaubten Verzeichnisse liegt oder versteckt ist: `Error: Attachment refused: ...` (siehe `safety/attachment-roots.md`). Es wird kein Entwurf angelegt.
 
@@ -182,6 +182,6 @@ Error: No message with UID 999 in folder "INBOX".
 
 If no folder found to save: IMAP error.
 
-If attachment does not exist: `Error: Attachment file not found: ...`
+If attachment does not exist: `Error: Attachment refused: ...` (same refusal as for a path that is not allowed)
 
 If an attachment is outside the allowed directories or hidden: `Error: Attachment refused: ...` (see `safety/attachment-roots.md`). No draft is created.

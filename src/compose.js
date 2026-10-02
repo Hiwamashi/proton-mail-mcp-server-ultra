@@ -105,3 +105,12 @@ export function splitAddresses(value) {
     .map((a) => a.trim())
     .filter(Boolean);
 }
+
+// delete_draft and update_draft remove a message from Drafts. A message there without the \Draft flag
+// (e.g. an email moved in with move_email) is not a draft and must never be deleted through them.
+export function assertIsDraft(flags, uid) {
+  const list = flags instanceof Set ? [...flags] : flags || [];
+  if (!list.includes("\\Draft")) {
+    throw new Error(`Message UID ${uid} in Drafts is not a draft (it has no \\Draft flag), so it is left untouched.`);
+  }
+}

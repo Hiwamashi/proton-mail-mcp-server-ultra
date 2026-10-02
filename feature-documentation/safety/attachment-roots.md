@@ -39,7 +39,7 @@ Der Standard für `PROTON_MCP_ATTACHMENT_DIR` ist zugleich Ablage für gespeiche
 
 1. `~` am Anfang wird zum Home-Verzeichnis erweitert.
 2. Der Pfad muss absolut sein. Relative Pfade werden abgelehnt, weil das Arbeitsverzeichnis des Servers beliebig ist: `Attachment path must be absolute: <pfad>`.
-3. `realpath` löst Symlinks und `..` auf, `stat` auf den echten Pfad. Fehlt die Datei: `Attachment file not found: <pfad>`.
+3. `realpath` löst Symlinks und `..` auf, `stat` auf den echten Pfad. Fehlt die Datei, gilt dieselbe Ablehnung `Attachment refused: ...` wie für einen nicht erlaubten Pfad: Die Fehlermeldung verrät nicht, ob eine Datei außerhalb der erlaubten Verzeichnisse existiert.
 4. Der echte Pfad muss eine **reguläre Datei** sein. Verzeichnisse und Sonderdateien werden abgelehnt.
 5. Bei `roots !== "*"`: Der echte Pfad muss mit dem echten Pfad eines Verzeichnisses plus Trennzeichen beginnen (`/root/` und nicht `/root-other/`).
 6. Kein Pfadsegment unterhalb des passenden Verzeichnisses darf mit `.` beginnen. Bei `*` gilt das für den ganzen echten Pfad ab `/`.
@@ -57,7 +57,7 @@ Die konfigurierten Verzeichnisse werden bei jeder Prüfung mit `realpath` aufgel
 ### Fehlermeldung
 
 ```
-Attachment refused: <pfad> is not an allowed attachment file. Allowed directories: <liste oder "any directory">. Hidden files and folders (names starting with ".") are never allowed. Change the allowed directories with PROTON_MCP_ATTACHMENT_ROOTS.
+Attachment refused: <pfad> is not an allowed attachment file. Allowed directories: <die tatsächlich wirksamen Verzeichnisse, "none" oder "any directory">. Hidden files and folders (names starting with ".") are never allowed. Change the allowed directories with PROTON_MCP_ATTACHMENT_ROOTS.
 ```
 
 ## Einbindung
@@ -71,8 +71,7 @@ Anhänge, die bei `update_draft` aus dem bestehenden Entwurf übernommen werden,
 | Situation | Meldung |
 |---|---|
 | Relativer Pfad | `Attachment path must be absolute: ...` |
-| Datei fehlt | `Attachment file not found: ...` |
-| Verzeichnis, Sonderdatei, außerhalb der Verzeichnisse, verstecktes Segment | `Attachment refused: ...` mit Liste der erlaubten Verzeichnisse |
+| Datei fehlt, Verzeichnis, Sonderdatei, außerhalb der Verzeichnisse, verstecktes Segment | `Attachment refused: ...` mit Liste der erlaubten Verzeichnisse |
 
 ## Migration
 
@@ -117,7 +116,7 @@ The default of `PROTON_MCP_ATTACHMENT_DIR` is also where saved attachments go (`
 
 1. A leading `~` is expanded to the home directory.
 2. The path must be absolute. Relative paths are refused because the server's working directory is arbitrary: `Attachment path must be absolute: <path>`.
-3. `realpath` resolves symlinks and `..`, then `stat` on the real path. If the file is missing: `Attachment file not found: <path>`.
+3. `realpath` resolves symlinks and `..`, then `stat` on the real path. If the file is missing, the same `Attachment refused: ...` refusal applies as for a path that is not allowed: the error does not reveal whether a file outside the allowed directories exists.
 4. The real path must be a **regular file**. Directories and special files are refused.
 5. If `roots !== "*"`: the real path must start with the real path of a directory plus a separator (`/root/`, not `/root-other/`).
 6. No path segment below the matching directory may start with `.`. With `*` this applies to the whole real path from `/`.
@@ -135,7 +134,7 @@ The configured directories are resolved with `realpath` on every check. Relative
 ### Error message
 
 ```
-Attachment refused: <path> is not an allowed attachment file. Allowed directories: <list or "any directory">. Hidden files and folders (names starting with ".") are never allowed. Change the allowed directories with PROTON_MCP_ATTACHMENT_ROOTS.
+Attachment refused: <path> is not an allowed attachment file. Allowed directories: <the roots actually in effect (relative/missing ones dropped), "none" or "any directory">. Hidden files and folders (names starting with ".") are never allowed. Change the allowed directories with PROTON_MCP_ATTACHMENT_ROOTS.
 ```
 
 ## Integration
@@ -149,8 +148,7 @@ Attachments that `update_draft` carries over from the existing draft come from t
 | Situation | Message |
 |---|---|
 | Relative path | `Attachment path must be absolute: ...` |
-| File missing | `Attachment file not found: ...` |
-| Directory, special file, outside the directories, hidden segment | `Attachment refused: ...` with the list of allowed directories |
+| Missing file, directory, special file, outside the directories, hidden segment | `Attachment refused: ...` with the list of allowed directories |
 
 ## Migration
 

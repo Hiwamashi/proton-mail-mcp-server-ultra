@@ -51,10 +51,10 @@ MCP-Text-Block:
 
 Falls kein Empfänger: Die Mail wird versendet, aber `to` ist leer.
 
-Falls Anhang-Datei nicht existiert:
+Falls Anhang-Datei nicht existiert, gilt dieselbe Ablehnung wie bei einem nicht erlaubten Pfad (kein Hinweis, ob die Datei existiert):
 
 ```
-Error: Attachment file not found: /path/to/file.pdf
+Error: Attachment refused: /path/to/file.pdf is not an allowed attachment file. Allowed directories: ...
 ```
 
 Falls ein Anhang außerhalb der erlaubten Verzeichnisse liegt oder versteckt ist: `Error: Attachment refused: ...` mit der Liste der erlaubten Verzeichnisse. Es wird nichts versendet.
@@ -112,10 +112,10 @@ MCP text block:
 
 If no recipient: the message is sent, but `to` is empty.
 
-If attachment file does not exist:
+If attachment file does not exist, the same refusal applies as for a path that is not allowed (no hint whether the file exists):
 
 ```
-Error: Attachment file not found: /path/to/file.pdf
+Error: Attachment refused: /path/to/file.pdf is not an allowed attachment file. Allowed directories: ...
 ```
 
 If an attachment is outside the allowed directories or hidden: `Error: Attachment refused: ...` with the list of allowed directories. Nothing is sent.

@@ -37,7 +37,7 @@ Chosen by the user: safe default, sending is an explicit opt-in. `read-only` exc
 Roots are resolved with `realpath` once at startup; non-existent roots are ignored with a warning on stderr. Alternative: denylist of known secret paths – rejected, an allowlist fails closed.
 
 ### Annotations
-Declared in each tool's `config.annotations`; the SDK passes them through `registerTool`. A test lists all registered tools and asserts every tool has `title`, `readOnlyHint` and `openWorldHint` set.
+A central table `TOOL_META` in `src/tools/annotations.js` maps each tool name to its `title` and annotations; `defineTool` merges the entry into the `registerTool` config, and a tool without an entry throws at registration. Alternative: annotations inside each tool's `config` – rejected because the full set of hints is easier to review and test in one table, and a missing entry fails loudly instead of silently shipping a tool without hints. A test asserts every registered tool has `title`, `readOnlyHint` and `openWorldHint` set.
 
 ### Instructions
 `new McpServer({ name, version }, { instructions })` with a short English text built from the active mode.

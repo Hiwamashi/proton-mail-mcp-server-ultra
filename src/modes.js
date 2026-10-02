@@ -1,18 +1,12 @@
-import { MODES } from "./config.js";
-
 // Operating-mode decisions kept as small pure functions so handlers and tests share one source of truth.
 
-export const ALL_MODES = ["read-only", "drafts", "full"];
 export const DRAFT_MODES = ["drafts", "full"];
 export const FULL_ONLY = ["full"];
 
-export function isMode(mode) {
-  return MODES.includes(mode);
-}
-
-// True if a tool restricted to `modes` is available in `mode`.
+// True if a tool restricted to `modes` is available in `mode`. A missing list is a bug, not "all modes".
 export function toolAvailable(modes, mode) {
-  return !modes || modes.includes(mode);
+  if (!Array.isArray(modes)) throw new Error("A tool definition needs a `modes` list");
+  return modes.includes(mode);
 }
 
 // Permanent deletion (delete_email on a message already in Trash) needs full mode.
@@ -58,7 +52,8 @@ export function readEmailDescription(mode) {
 
 const MODE_LIMITS = {
   "read-only": "Mailbox changes are disabled: no sending, drafting, moving, deleting or marking.",
-  drafts: "Sending email and permanent deletion are disabled; drafts can be created and the mailbox organized.",
+  drafts:
+    "Sending email and permanent deletion from Trash are disabled; drafts can be created, changed and deleted, and the mailbox organized.",
   full: "Sending email and permanent deletion are available; confirm them with the user.",
 };
 

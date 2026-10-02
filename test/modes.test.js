@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { registerMailboxTools } from "../src/tools/mailbox.js";
 import { registerComposeTools } from "../src/tools/compose.js";
+import { defineTool } from "../src/tools/util.js";
 import {
+  toolAvailable,
   allowsMarkAsRead,
   allowsPermanentDelete,
   draftHint,
@@ -73,4 +75,11 @@ test("draft hint is mode-dependent", () => {
   assert.match(draftHint("drafts"), /update_draft/);
   assert.match(draftHint("drafts"), /reviews and sends the draft in Proton Mail/);
   assert.doesNotMatch(draftHint("drafts"), /send_draft/);
+});
+
+test("a tool without a modes list is a bug and does not fail open", () => {
+  assert.throws(() => toolAvailable(undefined, "read-only"), /modes/);
+  assert.throws(() => defineTool({ registerTool() {} }, "list_folders", { description: "x" }, async () => {}, "full"), /modes/);
+  assert.equal(toolAvailable(["drafts"], "read-only"), false);
+  assert.equal(toolAvailable(["drafts"], "drafts"), true);
 });
