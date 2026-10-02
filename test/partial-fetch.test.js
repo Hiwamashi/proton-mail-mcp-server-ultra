@@ -14,13 +14,17 @@ const fixture = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta
 const FIXTURES = ["nested-multipart.eml", "related-images.eml", "rfc822-attachment.eml", "html-only.eml", "signed.eml"];
 
 const savedThreshold = CONFIG.partialFetchBytes;
+const savedCache = { maxBytes: messageCache.maxBytes, ttlMs: messageCache.ttlMs };
 beforeEach(() => {
+  messageCache.maxBytes = 1024 * 1024; // independent of PROTON_MCP_CACHE_* in the environment
+  messageCache.ttlMs = 60000;
   CONFIG.partialFetchBytes = 1000; // every fixture counts as "large"
   messageCache.clear();
 });
 afterEach(() => {
   CONFIG.partialFetchBytes = savedThreshold;
   messageCache.clear();
+  Object.assign(messageCache, savedCache);
 });
 
 const render = (parsed, flags, options = {}) => {
@@ -237,6 +241,75 @@ test("fallback: a part the server does not return", async () => {
   const loaded = await loadMessage(client, "INBOX", 5, { allowPartial: true });
   assert.equal(loaded.partial, undefined);
   assert.equal(client.calls.source, 1);
+});
+
+// --- attachment download edge cases ---
+
+const EMPTY_ATTACHMENT = Buffer.from(
+  [
+    "From: a@example.com",
+    "To: b@example.com",
+    "Subject: Empty attachment",
+    'Content-Type: multipart/mixed; boundary="B"',
+    "",
+    "--B",
+    "Content-Type: text/plain",
+    "",
+    "Body text",
+    "--B",
+    'Content-Type: application/octet-stream; name="empty.bin"',
+    'Content-Disposition: attachment; filename="empty.bin"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    "",
+    "--B--",
+    "",
+  ].join("\r\n")
+);
+
+test("a zero-byte attachment is returned empty without downloading its part", async () => {
+  CONFIG.partialFetchBytes = 10; // the inline message is tiny
+  const client = fakeImap(EMPTY_ATTACHMENT);
+  const loaded = await loadMessage(client, "INBOX", 5, { allowPartial: true });
+  assert.ok(loaded.partial);
+  const before = client.calls.ranges.length;
+  const found = await loadAttachment(client, 5, loaded, 0, "INBOX");
+  assert.equal(found.content.length, 0);
+  assert.equal(found.size, 0);
+  assert.equal(client.calls.ranges.length, before, "no fetch for an empty part");
+});
+
+for (const [label, answer] of [["undefined", undefined], ["NIL as null", null]]) {
+  test(`an attachment part the Bridge answers with ${label} falls back to the full message`, async () => {
+    const source = fixture("signed.eml");
+    const full = await simpleParser(source, { skipImageLinks: true });
+    const client = fakeImap(source);
+    const loaded = await loadMessage(client, "INBOX", 5, { allowPartial: true });
+    assert.ok(loaded.partial);
+    assert.equal(client.calls.source, 0);
+    const original = client.fetchOne;
+    client.fetchOne = async (seq, query) => {
+      const response = await original(seq, query);
+      if (response && query.bodyParts && !query.bodyParts.some((e) => typeof e === "object")) response.bodyParts.set("2", answer);
+      return response;
+    };
+    const found = await loadAttachment(client, 5, loaded, 1, "INBOX");
+    assert.equal(client.calls.source, 1, "the attachment came from the full path");
+    assert.ok(found.content.equals(full.attachments[1].content));
+    assert.equal(found.filename, full.attachments[1].filename);
+  });
+}
+
+test("a message at or below the threshold costs one size fetch more than the full path and no BODYSTRUCTURE", async () => {
+  const source = fixture("signed.eml");
+  CONFIG.partialFetchBytes = source.length;
+  const client = fakeImap(source);
+  let fetches = 0;
+  const original = client.fetchOne;
+  client.fetchOne = async (...args) => (fetches++, original(...args));
+  await loadMessage(client, "INBOX", 5, { allowPartial: true });
+  assert.equal(fetches, 2, "size fetch + source fetch");
+  assert.equal(client.calls.structure, 0);
 });
 
 test("planPartialFetch only accepts known multipart structures", () => {

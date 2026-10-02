@@ -144,7 +144,7 @@ Optionale Einstellungen:
 | `PROTON_BRIDGE_IDLE_TIMEOUT_MS` | `300000` | IMAP-Verbindung nach Leerlauf schließen |
 | `PROTON_MCP_CACHE_MAX_BYTES` | `67108864` | Budget des Nachrichten-Caches in Bytes (64 MB); `0` schaltet den Cache aus |
 | `PROTON_MCP_CACHE_TTL_MS` | `600000` | Lebensdauer eines Cache-Eintrags in Millisekunden (10 min) |
-| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` | Ab dieser Nachrichtengröße (5 MB) laden `read_email` und `get_attachment` nur Header und Text, Anhänge einzeln; ein sehr hoher Wert (z. B. `999999999999`) schaltet das aus |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` | Bei Nachrichten, die größer als 5 MB sind, laden `read_email` und `get_attachment` nur Header und Text, Anhänge einzeln; ein sehr hoher Wert (z. B. `999999999999`) schaltet das aus |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` | Größtes Bild (1 MB), das `get_attachment` direkt zeigt; größere werden gespeichert. `5242880` stellt das frühere Limit von 5 MB wieder her |
 
 **Hinweis zum Bild-Limit:** Früher kamen Bilder bis 5 MB direkt zurück, jetzt nur noch bis 1 MB. Größere Bilder speichert `get_attachment` und meldet den Pfad. Mit `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` gilt wieder das alte Limit.
@@ -421,7 +421,7 @@ Optional settings:
 | `PROTON_BRIDGE_IDLE_TIMEOUT_MS` | `300000` | Close the IMAP connection after this idle time |
 | `PROTON_MCP_CACHE_MAX_BYTES` | `67108864` | Budget of the message cache in bytes (64 MB); `0` disables the cache |
 | `PROTON_MCP_CACHE_TTL_MS` | `600000` | Lifetime of a cache entry in milliseconds (10 min) |
-| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` | From this message size (5 MB), `read_email` and `get_attachment` load only headers and text, attachments one by one; a very high value (e.g. `999999999999`) turns this off |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` | For messages larger than 5 MB, `read_email` and `get_attachment` load only headers and text, attachments one by one; a very high value (e.g. `999999999999`) turns this off |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` | Largest image (1 MB) that `get_attachment` shows directly; larger ones are saved. `5242880` restores the former 5 MB limit |
 
 **Note on the image limit:** Images up to 5 MB used to come back directly, now only up to 1 MB. `get_attachment` saves larger images and reports the path. With `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` the old limit applies again.

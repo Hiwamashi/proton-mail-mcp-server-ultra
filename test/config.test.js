@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { join } from "node:path";
-import { parseMode, parseAttachmentRoots } from "../src/config.js";
+import { parseMode, parseAttachmentRoots, parseNonNegativeInt } from "../src/config.js";
 
 const HOME = "/home/u";
 const DIR = "/home/u/Downloads/Proton-Anhänge";
@@ -49,4 +49,22 @@ test("message cache and large-message settings have their documented defaults", 
   assert.equal(CONFIG.cacheTtlMs, 600000);
   assert.equal(CONFIG.partialFetchBytes, 5242880);
   assert.equal(CONFIG.maxInlineImageBytes, 1048576);
+});
+
+test("numeric settings: valid non-negative integers are taken, 0 included, without a warning", () => {
+  const warnings = [];
+  const warn = (line) => warnings.push(line);
+  assert.equal(parseNonNegativeInt("X", "123", 7, warn), 123);
+  assert.equal(parseNonNegativeInt("X", "0", 7, warn), 0);
+  assert.equal(parseNonNegativeInt("X", " 42 ", 7, warn), 42);
+  assert.deepEqual(warnings, []);
+});
+
+test("numeric settings: invalid values fall back to the default with one warning naming the variable", () => {
+  for (const bad of ["abc", "1.5", "-3", "", "12MB", "1e3", "99999999999999999999"]) {
+    const warnings = [];
+    assert.equal(parseNonNegativeInt("PROTON_MCP_CACHE_TTL_MS", bad, 600000, (line) => warnings.push(line)), 600000, bad);
+    assert.equal(warnings.length, 1, bad);
+    assert.match(warnings[0], /PROTON_MCP_CACHE_TTL_MS/);
+  }
 });

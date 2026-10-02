@@ -159,10 +159,15 @@ async function loadFull(client, folder, uid) {
 // part – the caller then uses the full path. The attachments of the result have no content;
 // `partial.parts[i]` is the IMAP part to download for attachment i (see loadAttachment).
 async function loadPartial(client, folder, uid) {
-  const info = await client.fetchOne(`${uid}`, { uid: true, flags: true, size: true, bodyStructure: true }, { uid: true });
+  // The size comes first; BODYSTRUCTURE is only requested for messages above the threshold, so small
+  // messages cost one cheap size fetch on top of the full path.
+  const info = await client.fetchOne(`${uid}`, { uid: true, flags: true, size: true }, { uid: true });
   if (!info) throw notFound(uid, folder);
-  if (!(info.size > CONFIG.partialFetchBytes) || !info.bodyStructure) return null;
-  const loaded = await loadPartially(client, uid, info.bodyStructure);
+  if (!(info.size > CONFIG.partialFetchBytes)) return null;
+  const structure = await client.fetchOne(`${uid}`, { uid: true, bodyStructure: true }, { uid: true });
+  if (!structure) throw notFound(uid, folder);
+  if (!structure.bodyStructure) return null;
+  const loaded = await loadPartially(client, uid, structure.bodyStructure);
   return loaded && { ...loaded, flags: [...(info.flags || [])] };
 }
 
@@ -198,12 +203,18 @@ export async function loadMessage(client, folder, uid, { allowPartial = false } 
 
 // Returns attachment `index` of a message from loadMessage, with its content. For part-wise loaded
 // messages only that one part is downloaded (not cached). Returns undefined for an unknown index.
-export async function loadAttachment(client, uid, loaded, index) {
+// A zero-byte part needs no download. If the part cannot be downloaded on its own (the Bridge answers
+// NIL or an unusable literal), the attachment is taken from the full message instead, like the full path does.
+export async function loadAttachment(client, uid, loaded, index, folder) {
   const attachment = loaded.parsed.attachments?.[index];
   if (!attachment || !loaded.partial) return attachment;
+  if (attachment.size === 0) return { ...attachment, content: Buffer.alloc(0), size: 0 };
   const content = await downloadPart(client, uid, loaded.partial.parts[index], loaded.partial.encodings[index]);
-  if (!content) throw new Error(`Could not download attachment ${index} of UID ${uid}.`);
-  return { ...attachment, content, size: content.length };
+  if (content) return { ...attachment, content, size: content.length };
+  const { parsed } = await loadFull(client, folder, uid);
+  const fromFull = parsed.attachments?.[index];
+  if (!fromFull) throw new Error(`Could not download attachment ${index} of UID ${uid}.`);
+  return fromFull;
 }
 
 let specialFolderCache = null;

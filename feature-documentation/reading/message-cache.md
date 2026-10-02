@@ -23,7 +23,7 @@ Beides ist in `loadMessage()` gebündelt, das alle Tools statt des früheren `fe
 |---|---|---|
 | `PROTON_MCP_CACHE_MAX_BYTES` | `67108864` (64 MB) | Gesamtbudget des Caches in Bytes. `0` schaltet den Cache aus |
 | `PROTON_MCP_CACHE_TTL_MS` | `600000` (10 min) | Lebensdauer eines Eintrags in Millisekunden |
-| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` (5 MB) | Ab dieser Nachrichtengröße wird teilweise geladen. Ein sehr hoher Wert (z. B. `999999999999`) schaltet den Teilpfad faktisch aus |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` (5 MB) | Nachrichten, die größer sind, werden teilweise geladen. Ein sehr hoher Wert (z. B. `999999999999`) schaltet den Teilpfad faktisch aus |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` (1 MB) | Größte Bilddatei, die `get_attachment` als Bild zurückgibt; größere werden gespeichert |
 
 Alle vier stehen in `CONFIG` (`cacheMaxBytes`, `cacheTtlMs`, `partialFetchBytes`, `maxInlineImageBytes`). Siehe auch `configuration.md`.
@@ -59,7 +59,7 @@ IMAP-Inhalt ist für eine feste Kombination aus UIDVALIDITY und UID unveränderl
 `loadMessage(client, folder, uid, { allowPartial })` entscheidet den Pfad:
 
 1. Treffer im Cache (und passend zu `allowPartial`): nur Flags holen.
-2. Sonst, nur mit `allowPartial: true`: `loadPartial()` fragt Größe und BODYSTRUCTURE ab. Ist die Nachricht nicht größer als `PROTON_MCP_PARTIAL_FETCH_BYTES`, ist das Ergebnis `null`.
+2. Sonst, nur mit `allowPartial: true`: `loadPartial()` fragt zuerst nur Größe und Flags ab. Ist die Nachricht nicht größer als `PROTON_MCP_PARTIAL_FETCH_BYTES`, ist das Ergebnis `null` (Kosten gegenüber dem vollen Pfad: eine kleine Größenanfrage, keine BODYSTRUCTURE). Nur bei größeren Nachrichten folgt die BODYSTRUCTURE-Anfrage.
 3. Sonst `loadFull()`: ganze Quelle holen und mit `simpleParser` (`skipImageLinks: true`) parsen.
 
 Nur `read_email` und `get_attachment` übergeben `allowPartial: true`. Alles, was eine Mail neu aufbaut oder verschickt (Antworten, `update_draft`, `send_draft`, `delete_draft`), nimmt immer den vollen Pfad und bekommt nie einen teilweise geladenen Eintrag. Ist für eine UID nur ein Teileintrag im Cache, laden diese Aufrufer die Mail voll und ersetzen den Eintrag.
@@ -136,8 +136,8 @@ UID 8495 (29,7 MB, 11 Anhänge), Vorher gegen nur Cache: zweites `read_email` 26
 
 - **Budget zählt Rohgröße.** Das Budget rechnet mit der Größe der Rohnachricht (bei Teilladung mit der des Gerüsts). Das geparste Objekt kann im Speicher größer sein; der tatsächliche Speicherbedarf kann das Budget deshalb übersteigen.
 - **Teileinträge nur für Lesen.** Teilweise geladene Einträge bekommen nur `read_email` und `get_attachment`. `update_draft`, `send_draft`, `delete_draft` und das Laden für Antworten laden immer voll.
-- **Zusätzliche Anfragen bei einem Fehlzugriff.** Der Teilpfad kostet bei einem Cache-Fehlzugriff mehr FETCH-Anfragen: Größe und BODYSTRUCTURE, Kopf- und Textteile, je base64-Anhang zwei kleine Größenanfragen. Gegen eine lokale Bridge ist der volle Download schnell; der Nutzen des Teilpfads liegt vor allem in der übertragenen Datenmenge.
-- **Anhänge werden nicht gecacht.** Jeder `get_attachment`-Aufruf einer Teilmail holt den Anhang erneut.
+- **Zusätzliche Anfragen bei einem Fehlzugriff.** Der Teilpfad kostet bei einem Cache-Fehlzugriff mehr FETCH-Anfragen: Größe, BODYSTRUCTURE, Kopf- und Textteile, je base64-Anhang zwei kleine Größenanfragen. Gegen eine lokale Bridge ist der volle Download schnell; der Nutzen des Teilpfads liegt vor allem in der übertragenen Datenmenge.
+- **Anhänge werden nicht gecacht.** Jeder `get_attachment`-Aufruf einer Teilmail holt den Anhang erneut. Ein Anhang mit 0 Bytes wird ohne Download leer zurückgegeben; liefert die Bridge für einen Teil keinen Inhalt (NIL), lädt `get_attachment` die ganze Mail und nimmt den Anhang daraus, wie der volle Pfad.
 - **Nur ein Prozess.** Der Cache gilt je Serverprozess und überlebt keinen Neustart.
 
 ---
@@ -163,7 +163,7 @@ Both are bundled in `loadMessage()`, which all tools use instead of the former `
 |---|---|---|
 | `PROTON_MCP_CACHE_MAX_BYTES` | `67108864` (64 MB) | Total cache budget in bytes. `0` disables the cache |
 | `PROTON_MCP_CACHE_TTL_MS` | `600000` (10 min) | Lifetime of an entry in milliseconds |
-| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` (5 MB) | From this message size on, the message is loaded partially. A very high value (e.g. `999999999999`) effectively disables the partial path |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` (5 MB) | Messages larger than this are loaded partially. A very high value (e.g. `999999999999`) effectively disables the partial path |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` (1 MB) | Largest image file `get_attachment` returns as an image; larger ones are saved |
 
 All four are in `CONFIG` (`cacheMaxBytes`, `cacheTtlMs`, `partialFetchBytes`, `maxInlineImageBytes`). See also `configuration.md`.
@@ -199,7 +199,7 @@ IMAP content is immutable for a fixed combination of UIDVALIDITY and UID. An ent
 `loadMessage(client, folder, uid, { allowPartial })` decides the path:
 
 1. Cache hit (and compatible with `allowPartial`): fetch the flags only.
-2. Otherwise, only with `allowPartial: true`: `loadPartial()` queries size and BODYSTRUCTURE. If the message is not larger than `PROTON_MCP_PARTIAL_FETCH_BYTES`, the result is `null`.
+2. Otherwise, only with `allowPartial: true`: `loadPartial()` first queries only size and flags. If the message is not larger than `PROTON_MCP_PARTIAL_FETCH_BYTES`, the result is `null` (cost compared with the full path: one small size request, no BODYSTRUCTURE). The BODYSTRUCTURE request follows only for larger messages.
 3. Otherwise `loadFull()`: fetch the whole source and parse it with `simpleParser` (`skipImageLinks: true`).
 
 Only `read_email` and `get_attachment` pass `allowPartial: true`. Everything that rebuilds or sends a message (replies, `update_draft`, `send_draft`, `delete_draft`) always takes the full path and never receives a partially loaded entry. If only a partial entry is cached for a UID, these callers load the message in full and replace the entry.
@@ -277,5 +277,5 @@ UID 8495 (29.7 MB, 11 attachments), before vs cache only: second `read_email` 26
 - **Budget counts raw size.** The budget uses the size of the raw message (for a partial load, of the skeleton). The parsed object can be larger in memory, so the real memory use can exceed the budget.
 - **Partial entries for reading only.** Only `read_email` and `get_attachment` get partially loaded entries. `update_draft`, `send_draft`, `delete_draft` and loading for replies always load in full.
 - **Extra requests on a miss.** On a cache miss the partial path costs more FETCH requests: size and BODYSTRUCTURE, headers and text parts, plus two small size probes per base64 attachment. Against a local Bridge the full download is fast; the benefit of the partial path is mainly the transferred data volume.
-- **Attachments are not cached.** Every `get_attachment` call on a partial message fetches the attachment again.
+- **Attachments are not cached.** Every `get_attachment` call on a partial message fetches the attachment again. A 0-byte attachment is returned empty without a download; if the Bridge returns no content for a part (NIL), `get_attachment` loads the whole message and takes the attachment from it, like the full path.
 - **One process only.** The cache is per server process and does not survive a restart.

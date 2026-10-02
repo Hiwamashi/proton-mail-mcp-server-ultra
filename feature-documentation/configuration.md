@@ -52,8 +52,10 @@ Kommentare (mit `#` am Anfang) und leere Zeilen werden ignoriert. Werte können 
 | `PROTON_MCP_ATTACHMENT_ROOTS` | string | `~/Downloads`, `~/Documents`, `~/Desktop` und `PROTON_MCP_ATTACHMENT_DIR` | Erlaubte Verzeichnisse für lokale Anhänge, kommagetrennt, `~` wird erweitert. Ein einzelnes `*` hebt die Verzeichnisprüfung auf. Siehe `safety/attachment-roots.md` |
 | `PROTON_MCP_CACHE_MAX_BYTES` | number | `67108864` | Budget des Nachrichten-Caches in Bytes (64 MB). `0` schaltet den Cache aus. Siehe `reading/message-cache.md` |
 | `PROTON_MCP_CACHE_TTL_MS` | number | `600000` | Lebensdauer eines Cache-Eintrags in Millisekunden (10 min) |
-| `PROTON_MCP_PARTIAL_FETCH_BYTES` | number | `5242880` | Nachrichtengröße in Bytes (5 MB), ab der `read_email` und `get_attachment` teilweise laden. Ein sehr hoher Wert (z. B. `999999999999`) schaltet das aus |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | number | `5242880` | Nachrichtengröße in Bytes (5 MB); nur Nachrichten, die größer sind, lädt `read_email`/`get_attachment` teilweise. Ein sehr hoher Wert (z. B. `999999999999`) schaltet das aus |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | number | `1048576` | Größtes Bild in Bytes (1 MB), das `get_attachment` direkt als Bild zurückgibt; größere werden gespeichert. `5242880` stellt das frühere Limit wieder her |
+
+Ungültige Zahlenwerte (keine ganze Zahl oder negativ) bei diesen vier Variablen ersetzt der Server durch den Standardwert und gibt auf stderr eine Warnzeile mit dem Variablennamen aus. `0` bleibt gültig.
 
 ## `CONFIG`-Objekt
 
@@ -153,8 +155,10 @@ Comments (starting with `#`) and blank lines are ignored. Values can be unquoted
 | `PROTON_MCP_ATTACHMENT_ROOTS` | string | `~/Downloads`, `~/Documents`, `~/Desktop` and `PROTON_MCP_ATTACHMENT_DIR` | Allowed directories for local attachments, comma-separated, `~` is expanded. A lone `*` disables the directory check. See `safety/attachment-roots.md` |
 | `PROTON_MCP_CACHE_MAX_BYTES` | number | `67108864` | Budget of the message cache in bytes (64 MB). `0` disables the cache. See `reading/message-cache.md` |
 | `PROTON_MCP_CACHE_TTL_MS` | number | `600000` | Lifetime of a cache entry in milliseconds (10 min) |
-| `PROTON_MCP_PARTIAL_FETCH_BYTES` | number | `5242880` | Message size in bytes (5 MB) from which `read_email` and `get_attachment` load partially. A very high value (e.g. `999999999999`) turns this off |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | number | `5242880` | Message size in bytes (5 MB); only messages larger than this are loaded partially by `read_email`/`get_attachment`. A very high value (e.g. `999999999999`) turns this off |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | number | `1048576` | Largest image in bytes (1 MB) that `get_attachment` returns directly as an image; larger ones are saved. `5242880` restores the former limit |
+
+Invalid numeric values (not an integer, or negative) for these four variables are replaced by the default, and one warning line naming the variable goes to stderr. `0` stays valid.
 
 ## `CONFIG` object
 

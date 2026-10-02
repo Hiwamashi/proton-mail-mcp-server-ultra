@@ -233,7 +233,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
       // The part is downloaded while the folder is locked; converting it needs no connection.
       const attachment = await withMailbox(folder, async (client) => {
         const loaded = await loadMessage(client, folder, uid, { allowPartial: true });
-        const found = await loadAttachment(client, uid, loaded, index);
+        const found = await loadAttachment(client, uid, loaded, index, folder);
         if (!found) {
           const count = loaded.parsed.attachments?.length || 0;
           throw new Error(`Email UID ${uid} has ${count} attachment(s); index ${index} does not exist.`);

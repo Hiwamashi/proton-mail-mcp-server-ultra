@@ -63,10 +63,23 @@ export function parseAttachmentRoots(value, attachmentDir, home = homedir()) {
   return entries.map((e) => expandHome(e, home));
 }
 
+// Parses a non-negative integer setting. Anything else (empty, "abc", "1.5", "-3") falls back to the
+// default and reports one line naming the variable via `warn`. 0 is accepted as a value.
+export function parseNonNegativeInt(name, raw, fallback, warn = (line) => console.error(line)) {
+  const text = String(raw).trim();
+  if (/^\d+$/.test(text)) {
+    const value = Number(text);
+    if (Number.isSafeInteger(value)) return value;
+  }
+  warn(`proton-mail-mcp: ignoring invalid ${name}="${raw}" (expected a non-negative integer), using ${fallback}`);
+  return fallback;
+}
+
 // Environment variables win over the credentials file.
 function loadConfig() {
   const file = readCredentialsFile();
   const get = (key, fallback) => process.env[key] || file[key] || fallback;
+  const getInt = (key, fallback) => parseNonNegativeInt(key, get(key, String(fallback)), fallback);
 
   const username = get("PROTON_BRIDGE_USERNAME");
   const password = get("PROTON_BRIDGE_PASSWORD");
@@ -104,10 +117,10 @@ function loadConfig() {
     imapIdleTimeoutMs: parseInt(get("PROTON_BRIDGE_IDLE_TIMEOUT_MS", "300000"), 10),
     attachmentDir,
     // Message cache and large-message handling (see message-cache.js). A cache size of 0 disables the cache.
-    cacheMaxBytes: parseInt(get("PROTON_MCP_CACHE_MAX_BYTES", "67108864"), 10),
-    cacheTtlMs: parseInt(get("PROTON_MCP_CACHE_TTL_MS", "600000"), 10),
-    partialFetchBytes: parseInt(get("PROTON_MCP_PARTIAL_FETCH_BYTES", "5242880"), 10),
-    maxInlineImageBytes: parseInt(get("PROTON_MCP_MAX_INLINE_IMAGE_BYTES", "1048576"), 10),
+    cacheMaxBytes: getInt("PROTON_MCP_CACHE_MAX_BYTES", 67108864),
+    cacheTtlMs: getInt("PROTON_MCP_CACHE_TTL_MS", 600000),
+    partialFetchBytes: getInt("PROTON_MCP_PARTIAL_FETCH_BYTES", 5242880),
+    maxInlineImageBytes: getInt("PROTON_MCP_MAX_INLINE_IMAGE_BYTES", 1048576),
   };
 }
 

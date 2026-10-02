@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { MessageCache } from "../src/message-cache.js";
 import { loadMessage, NotFoundError } from "../src/connections.js";
@@ -74,6 +74,19 @@ test("clear empties the cache", () => {
   cache.clear();
   assert.equal(cache.size, 0);
   assert.equal(cache.totalBytes, 0);
+});
+
+// loadMessage uses the shared singleton; give it explicit settings so the tests do not depend on the
+// PROTON_MCP_CACHE_* environment (a cache size of 0 would disable it).
+const savedCache = { maxBytes: messageCache.maxBytes, ttlMs: messageCache.ttlMs };
+beforeEach(() => {
+  messageCache.maxBytes = 1024 * 1024;
+  messageCache.ttlMs = 60000;
+  messageCache.clear();
+});
+afterEach(() => {
+  messageCache.clear();
+  Object.assign(messageCache, savedCache);
 });
 
 const SOURCE = Buffer.from(
