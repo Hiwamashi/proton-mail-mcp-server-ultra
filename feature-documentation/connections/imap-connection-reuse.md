@@ -91,13 +91,15 @@ Der Cache wird einmalig gefüllt und bleibt für die Lebensdauer des Prozesses b
 
 ## Fehlerbehandlung
 
-### `fetchParsed()`
+### `loadMessage()`
 
-Liest eine Mail mit `BODY.PEEK` (setzt kein `\Seen`-Flag):
+Lädt eine Mail für alle Tools (Cache, voller oder teilweiser Download, siehe `reading/message-cache.md`). Der Inhalt kommt mit `BODY.PEEK` (setzt kein `\Seen`-Flag), die Flags werden immer frisch geholt. Der Client muss den Ordner bereits ausgewählt und gesperrt haben (`withMailbox()`).
 
 ```javascript
-const { parsed, flags, source } = await fetchParsed(client, uid, folder);
+const { parsed, flags, partial } = await loadMessage(client, folder, uid, { allowPartial: true });
 ```
+
+`allowPartial: true` übergeben nur `read_email` und `get_attachment`. `loadAttachment(client, uid, loaded, index)` holt bei teilweise geladenen Mails einen einzelnen Anhang nach.
 
 Wirft `NotFoundError`, falls die Mail nicht existiert:
 
@@ -112,7 +114,7 @@ Eine spezielle Fehlerklasse für fehlende Mails. Das MCP-Framework gibt diese le
 
 ## BODY.PEEK
 
-Der Server ruft `client.fetchOne(uid, { source: true })` auf, was intern `BODY.PEEK` nutzt. Dies liest den Body, ohne das `\Seen`-Flag zu setzen. Der Agent kann damit Mails „vorschauen", ohne sie als gelesen zu markieren – es sei denn, er setzt `markAsRead: true` in `read_email`.
+Der Server ruft `client.fetchOne(uid, { source: true, ... })` auf (und beim Teilpfad `bodyParts`), was intern `BODY.PEEK` nutzt. Dies liest den Body, ohne das `\Seen`-Flag zu setzen. Der Agent kann damit Mails „vorschauen", ohne sie als gelesen zu markieren – es sei denn, er setzt `markAsRead: true` in `read_email`.
 
 ## SMTP-Verbindung
 
@@ -209,13 +211,15 @@ The cache is filled once and persists for the lifetime of the process.
 
 ## Error handling
 
-### `fetchParsed()`
+### `loadMessage()`
 
-Reads a message with `BODY.PEEK` (does not set the `\Seen` flag):
+Loads a message for all tools (cache, full or partial download, see `reading/message-cache.md`). The content is fetched with `BODY.PEEK` (does not set the `\Seen` flag), and the flags are always fetched fresh. The client must already have the folder selected and locked (`withMailbox()`).
 
 ```javascript
-const { parsed, flags, source } = await fetchParsed(client, uid, folder);
+const { parsed, flags, partial } = await loadMessage(client, folder, uid, { allowPartial: true });
 ```
+
+Only `read_email` and `get_attachment` pass `allowPartial: true`. For partially loaded messages, `loadAttachment(client, uid, loaded, index)` fetches a single attachment afterwards.
 
 Throws `NotFoundError` if the message does not exist:
 
@@ -230,7 +234,7 @@ A special error class for missing messages. The MCP framework returns this reada
 
 ## BODY.PEEK
 
-The server calls `client.fetchOne(uid, { source: true })`, which internally uses `BODY.PEEK`. This reads the body without setting the `\Seen` flag. The agent can preview messages without marking them as read – unless it sets `markAsRead: true` in `read_email`.
+The server calls `client.fetchOne(uid, { source: true, ... })` (and `bodyParts` on the partial path), which internally uses `BODY.PEEK`. This reads the body without setting the `\Seen` flag. The agent can preview messages without marking them as read – unless it sets `markAsRead: true` in `read_email`.
 
 ## SMTP connection
 

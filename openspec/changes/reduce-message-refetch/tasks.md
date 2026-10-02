@@ -19,5 +19,5 @@
 
 ## 4. Documentation
 
-- [ ] 4.1 Add `feature-documentation/reading/message-cache.md` (DE+EN) and update `read-email.md`, `get-attachment.md`, `configuration.md`
-- [ ] 4.2 Update README (DE+EN) settings table and the image limit note; update PROGRESS.md; verify `npm test` and `npm run build` pass
+- [x] 4.1 Add `feature-documentation/reading/message-cache.md` (DE+EN) and update `read-email.md`, `get-attachment.md`, `configuration.md`
+- [x] 4.2 Update README (DE+EN) settings table and the image limit note; update PROGRESS.md; verify `npm test` and `npm run build` pass

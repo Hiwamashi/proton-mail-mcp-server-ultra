@@ -27,7 +27,7 @@
 
 MCP-Content-Block-Array (eins oder mehrere):
 
-### Bilder (PNG, JPEG, GIF, WebP, ≤ 5 MB)
+### Bilder (PNG, JPEG, GIF, WebP, ≤ 1 MB)
 
 ```javascript
 [
@@ -104,8 +104,12 @@ Beide sind per Index zugänglich.
 
 ### Größenlimits
 
-- **Bilder:** ≤ 5 MB werden direkt als Base64 zurückgegeben; größere werden gespeichert
+- **Bilder:** bis `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` (Standard **1 MB**, früher 5 MB) werden direkt als Base64 zurückgegeben; größere werden gespeichert. Die Antwort lautet dann `Image exceeds the inline limit of <größe> (PROTON_MCP_MAX_INLINE_IMAGE_BYTES) and is not shown inline. Saved to: <pfad>`. Das alte Verhalten stellt `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` wieder her.
 - **Text:** immer via `paginate()` aufgeteilt (default 20000 chars)
+
+### Cache und große Mails
+
+`get_attachment` lädt die Mail über `loadMessage()` (siehe `message-cache.md`). Mehrere Anhänge derselben Mail nacheinander laden die Mail nur einmal, die Flags kommen jedes Mal frisch. Bei Mails über 5 MB (`PROTON_MCP_PARTIAL_FETCH_BYTES`) wird nur der angeforderte Anhang in einer einzigen Anfrage geholt (`loadAttachment()`), nicht die ganze Mail. Der Anhang wird nicht gecacht, und der Index entspricht dem aus `read_email`. Gemessen an UID 32864 (46,7 MB, ein PDF): `get_attachment` etwa 130 bis 180 ms statt etwa 410 ms.
 
 ### PDF-Extraktion
 
@@ -158,7 +162,7 @@ Opens an attachment from a message. PDFs and text files are returned as text, im
 
 MCP content block array (one or more):
 
-### Images (PNG, JPEG, GIF, WebP, ≤ 5 MB)
+### Images (PNG, JPEG, GIF, WebP, ≤ 1 MB)
 
 ```javascript
 [
@@ -235,8 +239,12 @@ Both are accessible by index.
 
 ### Size limits
 
-- **Images:** ≤ 5 MB are returned directly as Base64; larger ones are saved
+- **Images:** up to `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` (default **1 MB**, previously 5 MB) are returned directly as Base64; larger ones are saved. The reply is then `Image exceeds the inline limit of <size> (PROTON_MCP_MAX_INLINE_IMAGE_BYTES) and is not shown inline. Saved to: <path>`. `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` restores the old behavior.
 - **Text:** always split via `paginate()` (default 20000 chars)
+
+### Cache and large messages
+
+`get_attachment` loads the message through `loadMessage()` (see `message-cache.md`). Opening several attachments of the same message in a row loads the message only once, and the flags are fresh every time. For messages above 5 MB (`PROTON_MCP_PARTIAL_FETCH_BYTES`), only the requested attachment is fetched, in a single request (`loadAttachment()`), not the whole message. The attachment is not cached, and the index matches the one from `read_email`. Measured on UID 32864 (46.7 MB, one PDF): `get_attachment` about 130 to 180 ms instead of about 410 ms.
 
 ### PDF extraction
 

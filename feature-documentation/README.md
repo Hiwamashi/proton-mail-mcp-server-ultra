@@ -22,7 +22,8 @@ Die Dokumentation folgt dem Code exakt – es werden keine geplanten oder mögli
 | **reading/list-emails.md** | Neueste Mails eines Ordners auflisten, paginierbar |
 | **reading/search-emails.md** | Suche nach Absender, Empfänger, Betreff, Body, Datum, etc. |
 | **reading/read-email.md** | Detailliertes Lesen einer Mail: Header, aufbereiteter Body, Anhängsliste |
-| **reading/get-attachment.md** | Anhang öffnen: PDF als Text, Bilder direkt, RFC822 gerendert, Speichern |
+| **reading/get-attachment.md** | Anhang öffnen: PDF als Text, Bilder direkt (bis 1 MB), RFC822 gerendert, Speichern |
+| **reading/message-cache.md** | Cache geparster Mails, teilweiser Download großer Mails, Bild-Limit, Rückbau, Messwerte |
 | **mailbox/move-email.md** | Mail in anderen Ordner verschieben |
 | **mailbox/mark-email.md** | Mail als gelesen/ungelesen oder markiert/unmarkiert setzen |
 | **mailbox/delete-email.md** | Mail löschen oder endgültig löschen |
@@ -49,6 +50,8 @@ Die Dokumentation folgt dem Code exakt – es werden keine geplanten oder mögli
 
 **Betriebsmodi** – `PROTON_MCP_MODE` (`read-only`, `drafts` als Standard, `full`) bestimmt, welche Tools überhaupt registriert werden. Senden und endgültiges Löschen gibt es nur in `full`. Lokale Anhänge kommen nur aus erlaubten Verzeichnissen (`PROTON_MCP_ATTACHMENT_ROOTS`). Siehe `safety/`.
 
+**Nachrichten-Cache und Teilladung** – `loadMessage()` hält geparste Mails 10 Minuten im Speicher (Standard 64 MB, Schlüssel Ordner + UIDVALIDITY + UID, Flags immer frisch) und lädt Mails über 5 MB für `read_email` und `get_attachment` teilweise. Rückbau über `PROTON_MCP_CACHE_MAX_BYTES=0` und `PROTON_MCP_PARTIAL_FETCH_BYTES=999999999999`. Siehe `reading/message-cache.md`.
+
 **HTML-Body-Handling** – Reine HTML-Mails werden in Text konvertiert, Bilder und Tracking-URLs fallen weg. Ist der Text-Body leer oder besteht nur aus URLs, wird das HTML verwendet.
 
 ---
@@ -73,7 +76,8 @@ The documentation tracks the code exactly – no planned or possible features ar
 | **reading/list-emails.md** | List newest messages in a folder, pageable |
 | **reading/search-emails.md** | Search by sender, recipient, subject, body, date, etc. |
 | **reading/read-email.md** | Detailed reading of a message: headers, processed body, attachment list |
-| **reading/get-attachment.md** | Open attachment: PDF as text, images directly, RFC822 rendered, save |
+| **reading/get-attachment.md** | Open attachment: PDF as text, images directly (up to 1 MB), RFC822 rendered, save |
+| **reading/message-cache.md** | Cache of parsed messages, partial download of large messages, image limit, rollback, measurements |
 | **mailbox/move-email.md** | Move message to another folder |
 | **mailbox/mark-email.md** | Mark message as read/unread or flagged/unflagged |
 | **mailbox/delete-email.md** | Delete message or permanently delete |
@@ -99,5 +103,7 @@ The documentation tracks the code exactly – no planned or possible features ar
 **BODY.PEEK** – The server reads message bodies without setting the `\Seen` flag, unless the agent sets `markAsRead: true`.
 
 **Operating modes** – `PROTON_MCP_MODE` (`read-only`, `drafts` as default, `full`) decides which tools are registered at all. Sending and permanent deletion exist only in `full`. Local attachments come only from allowed directories (`PROTON_MCP_ATTACHMENT_ROOTS`). See `safety/`.
+
+**Message cache and partial loading** – `loadMessage()` keeps parsed messages in memory for 10 minutes (default 64 MB, key folder + UIDVALIDITY + UID, flags always fresh) and loads messages above 5 MB partially for `read_email` and `get_attachment`. Roll back with `PROTON_MCP_CACHE_MAX_BYTES=0` and `PROTON_MCP_PARTIAL_FETCH_BYTES=999999999999`. See `reading/message-cache.md`.
 
 **HTML body handling** – HTML-only messages are converted to text, images and tracking URLs are dropped. If the text body is empty or consists only of URLs, the HTML is used instead.

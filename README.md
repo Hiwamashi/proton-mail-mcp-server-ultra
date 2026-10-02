@@ -26,6 +26,7 @@ Dieses Projekt ist ein Fork von **[tamnys/proton-mail-mcp-server](https://github
 - **HTML-Mails sind lesbar.** Bisher kam bei reinen HTML-Mails (rund die Hälfte eines typischen Postfachs) ein leerer Body zurück. Jetzt wird HTML in Text umgewandelt, Bilder, Styles und Tracking-URLs fallen weg. Newsletter, deren Textteil nur aus URLs besteht, werden ebenfalls über das HTML aufbereitet.
 - **Lange Mails kommen seitenweise** (`offset`/`maxChars`), statt den Kontext des Agenten zu sprengen.
 - **Anhänge lassen sich öffnen:** PDFs als Text, Bilder direkt, Textdateien und angehängte Mails gerendert. Alles andere wird lokal gespeichert.
+- **Weniger erneutes Laden:** Ein Cache hält geparste Mails zehn Minuten im Speicher, und große Mails über 5 MB werden nur teilweise geladen (Header und Text, Anhänge einzeln). Beides lässt sich abschalten (siehe Schritt 4).
 - **Entwürfe** erscheinen in Proton unter *Entwürfe* und lassen sich dort weiterbearbeiten. Damit kann ein Agent vorformulieren und ein Mensch vor dem Senden prüfen.
 - **Suchergebnisse sind nach Datum sortiert**, auch in „All Mail“.
 - **Quellcode statt Bundle:** modularer Code unter `src/`, Unit-Tests, Smoke-Test gegen die laufende Bridge.
@@ -141,6 +142,12 @@ Optionale Einstellungen:
 | `PROTON_MCP_ATTACHMENT_ROOTS` | `~/Downloads`, `~/Documents`, `~/Desktop`, Anhang-Ordner | Erlaubte Verzeichnisse für Anhänge, kommagetrennt; `*` hebt die Verzeichnisprüfung auf |
 | `PROTON_MCP_ATTACHMENT_DIR` | `~/Downloads/Proton-Anhänge` | Ablage für gespeicherte Anhänge |
 | `PROTON_BRIDGE_IDLE_TIMEOUT_MS` | `300000` | IMAP-Verbindung nach Leerlauf schließen |
+| `PROTON_MCP_CACHE_MAX_BYTES` | `67108864` | Budget des Nachrichten-Caches in Bytes (64 MB); `0` schaltet den Cache aus |
+| `PROTON_MCP_CACHE_TTL_MS` | `600000` | Lebensdauer eines Cache-Eintrags in Millisekunden (10 min) |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` | Ab dieser Nachrichtengröße (5 MB) laden `read_email` und `get_attachment` nur Header und Text, Anhänge einzeln; ein sehr hoher Wert (z. B. `999999999999`) schaltet das aus |
+| `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` | Größtes Bild (1 MB), das `get_attachment` direkt zeigt; größere werden gespeichert. `5242880` stellt das frühere Limit von 5 MB wieder her |
+
+**Hinweis zum Bild-Limit:** Früher kamen Bilder bis 5 MB direkt zurück, jetzt nur noch bis 1 MB. Größere Bilder speichert `get_attachment` und meldet den Pfad. Mit `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` gilt wieder das alte Limit.
 
 #### 5. Verbindung testen
 
@@ -251,7 +258,9 @@ src/server.js        Einstieg, registriert die Tools
 src/config.js        Zugangsdaten und Optionen, Betriebsmodus, erlaubte Anhang-Verzeichnisse
 src/modes.js         Betriebsmodi: Tool-Zuordnung, modusabhängige Texte, Server-Anweisungen
 src/safety.js        Pfadprüfung für Anhänge (Symlinks, versteckte Pfade)
-src/connections.js   Wiederverwendete IMAP-/SMTP-Verbindungen, Ordner-Sperren
+src/connections.js   Wiederverwendete IMAP-/SMTP-Verbindungen, Ordner-Sperren, Laden von Mails
+src/message-cache.js Cache geparster Mails (LRU nach Bytes, TTL)
+src/partial-fetch.js Teilweiser Download großer Mails
 src/content.js       Body-Aufbereitung: HTML→Text, Zitate, seitenweise Ausgabe
 src/compose.js       Antwortempfänger, Betreff, Zitat, MIME-Erzeugung
 src/attachments.js   Anhänge als Text/Bild bzw. Ablage
@@ -293,6 +302,7 @@ This project is a fork of **[tamnys/proton-mail-mcp-server](https://github.com/t
 
 - **HTML mail is readable.** Previously, HTML-only messages (about half of a typical mailbox) came back with an empty body. HTML is now converted to text; images, styles and tracking URLs are dropped. Newsletters whose text part consists only of URLs are also rendered from their HTML.
 - **Long messages are paginated** (`offset`/`maxChars`) instead of flooding the agent's context.
+- **Less re-fetching:** A cache keeps parsed messages in memory for ten minutes, and large messages above 5 MB are loaded only partially (headers and text, attachments one by one). Both can be turned off (see step 4).
 - **Attachments can be opened:** PDFs as text, images directly, text files and attached messages rendered. Everything else is saved locally.
 - **Drafts** appear in Proton under *Drafts* and can be edited there. An agent can prepare a reply and a human can review it before sending.
 - **Search results are sorted by date**, including in "All Mail".
@@ -409,6 +419,12 @@ Optional settings:
 | `PROTON_MCP_ATTACHMENT_ROOTS` | `~/Downloads`, `~/Documents`, `~/Desktop`, attachment folder | Allowed directories for attachments, comma-separated; `*` lifts the directory check |
 | `PROTON_MCP_ATTACHMENT_DIR` | `~/Downloads/Proton-Anhänge` | Folder for saved attachments |
 | `PROTON_BRIDGE_IDLE_TIMEOUT_MS` | `300000` | Close the IMAP connection after this idle time |
+| `PROTON_MCP_CACHE_MAX_BYTES` | `67108864` | Budget of the message cache in bytes (64 MB); `0` disables the cache |
+| `PROTON_MCP_CACHE_TTL_MS` | `600000` | Lifetime of a cache entry in milliseconds (10 min) |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` | From this message size (5 MB), `read_email` and `get_attachment` load only headers and text, attachments one by one; a very high value (e.g. `999999999999`) turns this off |
+| `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` | Largest image (1 MB) that `get_attachment` shows directly; larger ones are saved. `5242880` restores the former 5 MB limit |
+
+**Note on the image limit:** Images up to 5 MB used to come back directly, now only up to 1 MB. `get_attachment` saves larger images and reports the path. With `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` the old limit applies again.
 
 #### 5. Test the connection
 
@@ -519,7 +535,9 @@ src/server.js        Entry point, registers the tools
 src/config.js        Credentials and options, operating mode, allowed attachment directories
 src/modes.js         Operating modes: tool assignment, mode-dependent texts, server instructions
 src/safety.js        Path check for attachments (symlinks, hidden paths)
-src/connections.js   Reused IMAP/SMTP connections, folder locks
+src/connections.js   Reused IMAP/SMTP connections, folder locks, message loading
+src/message-cache.js Cache of parsed messages (LRU by bytes, TTL)
+src/partial-fetch.js Partial download of large messages
 src/content.js       Body rendering: HTML→text, quotes, pagination
 src/compose.js       Reply recipients, subject, quote, MIME generation
 src/attachments.js   Attachments as text/image or saved to disk

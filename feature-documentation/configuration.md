@@ -50,6 +50,10 @@ Kommentare (mit `#` am Anfang) und leere Zeilen werden ignoriert. Werte können 
 | `PROTON_MCP_ATTACHMENT_DIR` | string | `~/Downloads/Proton-Anhänge` | Verzeichnis, in das Anhänge gespeichert werden |
 | `PROTON_MCP_MODE` | string | `drafts` | Betriebsmodus: `read-only`, `drafts` oder `full`. Ungültig: Start bricht mit Exit-Code 1 ab. Siehe `safety/operating-modes.md` |
 | `PROTON_MCP_ATTACHMENT_ROOTS` | string | `~/Downloads`, `~/Documents`, `~/Desktop` und `PROTON_MCP_ATTACHMENT_DIR` | Erlaubte Verzeichnisse für lokale Anhänge, kommagetrennt, `~` wird erweitert. Ein einzelnes `*` hebt die Verzeichnisprüfung auf. Siehe `safety/attachment-roots.md` |
+| `PROTON_MCP_CACHE_MAX_BYTES` | number | `67108864` | Budget des Nachrichten-Caches in Bytes (64 MB). `0` schaltet den Cache aus. Siehe `reading/message-cache.md` |
+| `PROTON_MCP_CACHE_TTL_MS` | number | `600000` | Lebensdauer eines Cache-Eintrags in Millisekunden (10 min) |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | number | `5242880` | Nachrichtengröße in Bytes (5 MB), ab der `read_email` und `get_attachment` teilweise laden. Ein sehr hoher Wert (z. B. `999999999999`) schaltet das aus |
+| `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | number | `1048576` | Größtes Bild in Bytes (1 MB), das `get_attachment` direkt als Bild zurückgibt; größere werden gespeichert. `5242880` stellt das frühere Limit wieder her |
 
 ## `CONFIG`-Objekt
 
@@ -70,6 +74,10 @@ Die Funktion `loadConfig()` erzeugt:
   mode: string | undefined,          // "read-only" | "drafts" | "full" (undefined, falls ungültig)
   modeError: string | undefined,     // Meldung bei ungültigem Modus
   attachmentRoots: string[] | "*",   // Erlaubte Anhang-Verzeichnisse (nicht aufgelöst) oder "*"
+  cacheMaxBytes: number,             // Cache-Budget in Bytes, 0 = aus
+  cacheTtlMs: number,                // Lebensdauer eines Cache-Eintrags in ms
+  partialFetchBytes: number,         // Schwelle für teilweises Laden in Bytes
+  maxInlineImageBytes: number,       // Größtes direkt gezeigtes Bild in Bytes
 }
 ```
 
@@ -143,6 +151,10 @@ Comments (starting with `#`) and blank lines are ignored. Values can be unquoted
 | `PROTON_MCP_ATTACHMENT_DIR` | string | `~/Downloads/Proton-Anhänge` | Directory where attachments are saved |
 | `PROTON_MCP_MODE` | string | `drafts` | Operating mode: `read-only`, `drafts` or `full`. Invalid: startup aborts with exit code 1. See `safety/operating-modes.md` |
 | `PROTON_MCP_ATTACHMENT_ROOTS` | string | `~/Downloads`, `~/Documents`, `~/Desktop` and `PROTON_MCP_ATTACHMENT_DIR` | Allowed directories for local attachments, comma-separated, `~` is expanded. A lone `*` disables the directory check. See `safety/attachment-roots.md` |
+| `PROTON_MCP_CACHE_MAX_BYTES` | number | `67108864` | Budget of the message cache in bytes (64 MB). `0` disables the cache. See `reading/message-cache.md` |
+| `PROTON_MCP_CACHE_TTL_MS` | number | `600000` | Lifetime of a cache entry in milliseconds (10 min) |
+| `PROTON_MCP_PARTIAL_FETCH_BYTES` | number | `5242880` | Message size in bytes (5 MB) from which `read_email` and `get_attachment` load partially. A very high value (e.g. `999999999999`) turns this off |
+| `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | number | `1048576` | Largest image in bytes (1 MB) that `get_attachment` returns directly as an image; larger ones are saved. `5242880` restores the former limit |
 
 ## `CONFIG` object
 
@@ -163,6 +175,10 @@ The function `loadConfig()` produces:
   mode: string | undefined,          // "read-only" | "drafts" | "full" (undefined if invalid)
   modeError: string | undefined,     // Message for an invalid mode
   attachmentRoots: string[] | "*",   // Allowed attachment directories (unresolved) or "*"
+  cacheMaxBytes: number,             // Cache budget in bytes, 0 = off
+  cacheTtlMs: number,                // Lifetime of a cache entry in ms
+  partialFetchBytes: number,         // Threshold for partial loading in bytes
+  maxInlineImageBytes: number,       // Largest image shown directly, in bytes
 }
 ```
 

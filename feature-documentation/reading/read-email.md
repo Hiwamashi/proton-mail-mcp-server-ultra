@@ -82,6 +82,10 @@ Marking an email as read is not available in `read-only` mode (markAsRead was ig
 
 Beschreibung von `read_email` und des Parameters `markAsRead` passen sich dem Modus an (`readEmailDescription`, `markAsReadDescription` in `src/modes.js`). Das Tool ist in allen Modi verfügbar; siehe `safety/operating-modes.md`.
 
+### Cache und große Mails
+
+`read_email` lädt über `loadMessage()` (siehe `message-cache.md`): Wiederholte Aufrufe für dieselbe Mail kommen aus dem Cache (Standard 64 MB, 10 min), die Flags werden immer frisch geholt. Mails über 5 MB (`PROTON_MCP_PARTIAL_FETCH_BYTES`) werden teilweise geladen: Es kommen nur Header und Textteile, die Anhänge bleiben auf dem Server. Die Anhangsliste (Reihenfolge, Index, Dateiname, Typ, Größe) ist dabei dieselbe wie bei vollem Laden; bei unklarer Struktur fällt der Server auf den vollen Download zurück.
+
 ### BODY.PEEK
 
 Das Tool nutzt intern `BODY.PEEK`, sodass das Lesen das `\Seen`-Flag **nicht** setzt, außer wenn `markAsRead: true`.
@@ -89,8 +93,8 @@ Das Tool nutzt intern `BODY.PEEK`, sodass das Lesen das `\Seen`-Flag **nicht** s
 ## Implementierung
 
 ```javascript
-// Fetch mit BODY.PEEK (implizit in imapflow)
-const { parsed, flags } = await fetchParsed(client, uid, folder);
+// Cache oder Download mit BODY.PEEK (implizit in imapflow); Flags immer frisch
+const { parsed, flags } = await loadMessage(client, folder, uid, { allowPartial: true });
 let { body, source } = extractBody(parsed, { format, includeLinks });
 
 // Zitate entfernen (optional)
@@ -203,6 +207,10 @@ Marking an email as read is not available in `read-only` mode (markAsRead was ig
 
 The description of `read_email` and of the `markAsRead` parameter adapt to the mode (`readEmailDescription`, `markAsReadDescription` in `src/modes.js`). The tool is available in all modes; see `safety/operating-modes.md`.
 
+### Cache and large messages
+
+`read_email` loads through `loadMessage()` (see `message-cache.md`): repeated calls for the same message are served from the cache (default 64 MB, 10 min), and the flags are always fetched fresh. Messages above 5 MB (`PROTON_MCP_PARTIAL_FETCH_BYTES`) are loaded partially: only headers and text parts arrive, the attachments stay on the server. The attachment list (order, index, filename, type, size) is the same as with a full load; if the structure is unclear, the server falls back to the full download.
+
 ### BODY.PEEK
 
 The tool internally uses `BODY.PEEK`, so reading does **not** set the `\Seen` flag, unless `markAsRead: true`.
@@ -210,8 +218,8 @@ The tool internally uses `BODY.PEEK`, so reading does **not** set the `\Seen` fl
 ## Implementation
 
 ```javascript
-// Fetch with BODY.PEEK (implicit in imapflow)
-const { parsed, flags } = await fetchParsed(client, uid, folder);
+// Cache or download with BODY.PEEK (implicit in imapflow); flags always fresh
+const { parsed, flags } = await loadMessage(client, folder, uid, { allowPartial: true });
 let { body, source } = extractBody(parsed, { format, includeLinks });
 
 // Remove quotes (optional)
