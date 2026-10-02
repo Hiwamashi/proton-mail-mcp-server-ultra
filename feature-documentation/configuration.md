@@ -48,6 +48,8 @@ Kommentare (mit `#` am Anfang) und leere Zeilen werden ignoriert. Werte können 
 | `PROTON_BRIDGE_ALIASES` | string | – | Weitere eigene Adressen, kommagetrennt (z. B. `alias1@proton.me, alias2@proton.me`) |
 | `PROTON_BRIDGE_IDLE_TIMEOUT_MS` | number | `300000` | Millisekunden ohne Aktivität, nach denen die IMAP-Verbindung geschlossen wird (5 min) |
 | `PROTON_MCP_ATTACHMENT_DIR` | string | `~/Downloads/Proton-Anhänge` | Verzeichnis, in das Anhänge gespeichert werden |
+| `PROTON_MCP_MODE` | string | `drafts` | Betriebsmodus: `read-only`, `drafts` oder `full`. Ungültig: Start bricht mit Exit-Code 1 ab. Siehe `safety/operating-modes.md` |
+| `PROTON_MCP_ATTACHMENT_ROOTS` | string | `~/Downloads`, `~/Documents`, `~/Desktop` und `PROTON_MCP_ATTACHMENT_DIR` | Erlaubte Verzeichnisse für lokale Anhänge, kommagetrennt, `~` wird erweitert. Ein einzelnes `*` hebt die Verzeichnisprüfung auf. Siehe `safety/attachment-roots.md` |
 
 ## `CONFIG`-Objekt
 
@@ -65,6 +67,9 @@ Die Funktion `loadConfig()` erzeugt:
   selfAddresses: string[],           // Alle eigenen Adressen (lowercase)
   imapIdleTimeoutMs: number,         // Idle-Timeout in ms
   attachmentDir: string,             // Absoluter Pfad für Anhänge
+  mode: string | undefined,          // "read-only" | "drafts" | "full" (undefined, falls ungültig)
+  modeError: string | undefined,     // Meldung bei ungültigem Modus
+  attachmentRoots: string[] | "*",   // Erlaubte Anhang-Verzeichnisse (nicht aufgelöst) oder "*"
 }
 ```
 
@@ -73,6 +78,10 @@ Die Funktion `loadConfig()` erzeugt:
 **`selfAddresses`** ist eine Menge aller bekannten eigenen Adressen (Benutzername, `PROTON_BRIDGE_FROM`, `PROTON_BRIDGE_ALIASES`), alle lowercase, ohne Duplikate. Sie wird bei der Antwort-Logik verwendet, um zu erkennen, ob eine Mail von uns selbst versendet wurde.
 
 ## Fehlerbehandlung
+
+Die Funktion `assertMode()` wird bei Server-Start zuerst aufgerufen und bricht den Prozess ab (Exit-Code 1), falls `PROTON_MCP_MODE` kein gültiger Wert ist (`Invalid PROTON_MCP_MODE "<wert>". Valid values: "read-only", "drafts", "full".`). Ein ungültiger Modus wirft beim Import nicht, damit Tests die Konfiguration laden können; er wird in `CONFIG.modeError` gehalten.
+
+`logStartupConfig()` schreibt danach Modus und erlaubte Anhang-Verzeichnisse nach stderr (`proton-mail-mcp: mode=...`, `proton-mail-mcp: attachment roots=...`).
 
 Die Funktion `assertCredentials()` wird bei Server-Start aufgerufen und bricht den Prozess ab (Exit-Code 1), falls `PROTON_BRIDGE_USERNAME` oder `PROTON_BRIDGE_PASSWORD` fehlen:
 
@@ -132,6 +141,8 @@ Comments (starting with `#`) and blank lines are ignored. Values can be unquoted
 | `PROTON_BRIDGE_ALIASES` | string | – | Additional own addresses, comma-separated (e.g. `alias1@proton.me, alias2@proton.me`) |
 | `PROTON_BRIDGE_IDLE_TIMEOUT_MS` | number | `300000` | Milliseconds of inactivity before closing the IMAP connection (5 min) |
 | `PROTON_MCP_ATTACHMENT_DIR` | string | `~/Downloads/Proton-Anhänge` | Directory where attachments are saved |
+| `PROTON_MCP_MODE` | string | `drafts` | Operating mode: `read-only`, `drafts` or `full`. Invalid: startup aborts with exit code 1. See `safety/operating-modes.md` |
+| `PROTON_MCP_ATTACHMENT_ROOTS` | string | `~/Downloads`, `~/Documents`, `~/Desktop` and `PROTON_MCP_ATTACHMENT_DIR` | Allowed directories for local attachments, comma-separated, `~` is expanded. A lone `*` disables the directory check. See `safety/attachment-roots.md` |
 
 ## `CONFIG` object
 
@@ -149,6 +160,9 @@ The function `loadConfig()` produces:
   selfAddresses: string[],           // All own addresses (lowercase)
   imapIdleTimeoutMs: number,         // Idle timeout in ms
   attachmentDir: string,             // Absolute path for attachments
+  mode: string | undefined,          // "read-only" | "drafts" | "full" (undefined if invalid)
+  modeError: string | undefined,     // Message for an invalid mode
+  attachmentRoots: string[] | "*",   // Allowed attachment directories (unresolved) or "*"
 }
 ```
 
@@ -157,6 +171,10 @@ The function `loadConfig()` produces:
 **`selfAddresses`** is a set of all known own addresses (username, `PROTON_BRIDGE_FROM`, `PROTON_BRIDGE_ALIASES`), all lowercase, without duplicates. It is used in reply logic to detect whether a message was sent by us.
 
 ## Error handling
+
+The function `assertMode()` is called first on server startup and terminates the process (exit code 1) if `PROTON_MCP_MODE` is not a valid value (`Invalid PROTON_MCP_MODE "<value>". Valid values: "read-only", "drafts", "full".`). An invalid mode does not throw on import so tests can load the configuration; it is kept in `CONFIG.modeError`.
+
+`logStartupConfig()` then writes the mode and the allowed attachment directories to stderr (`proton-mail-mcp: mode=...`, `proton-mail-mcp: attachment roots=...`).
 
 The function `assertCredentials()` is called on server startup and terminates the process (exit code 1) if `PROTON_BRIDGE_USERNAME` or `PROTON_BRIDGE_PASSWORD` are missing:
 

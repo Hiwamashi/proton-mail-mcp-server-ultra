@@ -12,6 +12,8 @@
 
 Löscht eine Mail: Liegt sie nicht im Papierkorb, wird sie dorthin verschoben. Liegt sie bereits im Papierkorb, wird sie endgültig gelöscht.
 
+**Modi:** Verschieben in den Papierkorb ist in `drafts` und `full` möglich, in `read-only` ist das Tool nicht registriert. **Endgültiges Löschen ist nur in `full` möglich.** In `drafts` bleibt die Mail im Papierkorb; der Nutzer leert ihn in Proton Mail. Siehe `safety/operating-modes.md`.
+
 ## Parameter
 
 | Parameter | Typ | Beschreibung |
@@ -47,9 +49,17 @@ Wenn verschoben:
 | Aktueller Ordner | Aktion | Rückgabe |
 |---|---|---|
 | Nicht Papierkorb | Verschieben nach Papierkorb | `movedTo: "Trash"` |
-| Papierkorb | Endgültig löschen | `deletedPermanently: true` |
+| Papierkorb | Endgültig löschen (nur `full`) | `deletedPermanently: true` |
 
 Dies folgt dem Standard-Verhalten von Mail-Clients (z. B. Proton).
+
+Außerhalb von `full` wirft das Tool bei einer Mail im Papierkorb **vor** `messageDelete()` den Fehler:
+
+```
+Permanent deletion is not available in this mode: it requires PROTON_MCP_MODE=full. The email stays in Trash; the user can empty the trash in Proton Mail.
+```
+
+Die Mail bleibt unverändert. Die Tool-Beschreibung (`deleteEmailDescription(mode)`) erwähnt endgültiges Löschen nur in `full`. Annotation: `destructiveHint: true`.
 
 ### Papierkorb-Erkennung
 
@@ -87,6 +97,8 @@ Falls die Bridge den Papierkorb nicht kennt: Fallback zu `"Trash"` wird verwende
 
 Deletes a message: if it is not in Trash, moves it there. If it is already in Trash, deletes it permanently.
 
+**Modes:** Moving to Trash works in `drafts` and `full`; in `read-only` the tool is not registered. **Permanent deletion works only in `full`.** In `drafts` the message stays in Trash; the user empties it in Proton Mail. See `safety/operating-modes.md`.
+
 ## Parameters
 
 | Parameter | Type | Description |
@@ -122,9 +134,17 @@ If moved:
 | Current folder | Action | Return |
 |---|---|---|
 | Not Trash | Move to Trash | `movedTo: "Trash"` |
-| Trash | Permanently delete | `deletedPermanently: true` |
+| Trash | Permanently delete (`full` only) | `deletedPermanently: true` |
 
 This follows the standard behavior of mail clients (e.g. Proton).
+
+Outside `full`, for a message in Trash the tool throws **before** `messageDelete()`:
+
+```
+Permanent deletion is not available in this mode: it requires PROTON_MCP_MODE=full. The email stays in Trash; the user can empty the trash in Proton Mail.
+```
+
+The message stays untouched. The tool description (`deleteEmailDescription(mode)`) mentions permanent deletion only in `full`. Annotation: `destructiveHint: true`.
 
 ### Trash detection
 

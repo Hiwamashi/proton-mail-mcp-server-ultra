@@ -24,6 +24,6 @@
 
 ## 5. Documentation
 
-- [ ] 5.1 Add `feature-documentation/safety/operating-modes.md` and `feature-documentation/safety/attachment-roots.md` (DE+EN) and update the affected tool docs
-- [ ] 5.2 Update README (DE+EN): new variables, mode table, breaking-change migration note
-- [ ] 5.3 Update PROGRESS.md and verify `npm test` and `npm run build` pass
+- [x] 5.1 Add `feature-documentation/safety/operating-modes.md` and `feature-documentation/safety/attachment-roots.md` (DE+EN) and update the affected tool docs
+- [x] 5.2 Update README (DE+EN): new variables, mode table, breaking-change migration note
+- [x] 5.3 Update PROGRESS.md and verify `npm test` and `npm run build` pass

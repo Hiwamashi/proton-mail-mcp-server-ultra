@@ -34,6 +34,8 @@ Die Dokumentation folgt dem Code exakt – es werden keine geplanten oder mögli
 | **compose/update-draft.md** | Entwurf ändern (Empfänger, Betreff, Body, Anhänge) |
 | **compose/send-draft.md** | Entwurf versenden und aus Entwürfen entfernen |
 | **compose/delete-draft.md** | Entwurf löschen |
+| **safety/operating-modes.md** | Betriebsmodi `read-only`/`drafts`/`full`: welche Tools wann existieren, Tool-Annotationen, Server-Anweisungen |
+| **safety/attachment-roots.md** | Erlaubte Verzeichnisse für lokale Anhänge, Pfadprüfung (Symlinks, versteckte Pfade) |
 
 ## Wichtige Konzepte
 
@@ -44,6 +46,8 @@ Die Dokumentation folgt dem Code exakt – es werden keine geplanten oder mögli
 **Lesevorgänge mit Retry** – Nur idempotente Operationen (list, fetch, search) werden einmal automatisch wiederholt, falls die Verbindung verloren gehen sollte. Schreibvorgänge (append, delete, move) werden **nicht** wiederholt, um doppelte Ausführung zu vermeiden.
 
 **BODY.PEEK** – Der Server liest Mail-Bodies ohne das `\Seen`-Flag zu setzen, außer wenn der Agent `markAsRead: true` setzt.
+
+**Betriebsmodi** – `PROTON_MCP_MODE` (`read-only`, `drafts` als Standard, `full`) bestimmt, welche Tools überhaupt registriert werden. Senden und endgültiges Löschen gibt es nur in `full`. Lokale Anhänge kommen nur aus erlaubten Verzeichnissen (`PROTON_MCP_ATTACHMENT_ROOTS`). Siehe `safety/`.
 
 **HTML-Body-Handling** – Reine HTML-Mails werden in Text konvertiert, Bilder und Tracking-URLs fallen weg. Ist der Text-Body leer oder besteht nur aus URLs, wird das HTML verwendet.
 
@@ -81,6 +85,8 @@ The documentation tracks the code exactly – no planned or possible features ar
 | **compose/update-draft.md** | Modify draft (recipients, subject, body, attachments) |
 | **compose/send-draft.md** | Send draft and remove it from drafts |
 | **compose/delete-draft.md** | Permanently delete draft |
+| **safety/operating-modes.md** | Operating modes `read-only`/`drafts`/`full`: which tools exist when, tool annotations, server instructions |
+| **safety/attachment-roots.md** | Allowed directories for local attachments, path check (symlinks, hidden paths) |
 
 ## Key Concepts
 
@@ -91,5 +97,7 @@ The documentation tracks the code exactly – no planned or possible features ar
 **Read operations with retry** – Only idempotent operations (list, fetch, search) are automatically retried once if the connection is lost. Write operations (append, delete, move) are **not** retried to avoid double execution.
 
 **BODY.PEEK** – The server reads message bodies without setting the `\Seen` flag, unless the agent sets `markAsRead: true`.
+
+**Operating modes** – `PROTON_MCP_MODE` (`read-only`, `drafts` as default, `full`) decides which tools are registered at all. Sending and permanent deletion exist only in `full`. Local attachments come only from allowed directories (`PROTON_MCP_ATTACHMENT_ROOTS`). See `safety/`.
 
 **HTML body handling** – HTML-only messages are converted to text, images and tracking URLs are dropped. If the text body is empty or consists only of URLs, the HTML is used instead.

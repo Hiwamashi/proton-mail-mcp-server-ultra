@@ -12,6 +12,8 @@
 
 Ändert einen gespeicherten Entwurf: Empfänger, Betreff, Body, HTML, Anhänge. Nur die angegebenen Felder werden ersetzt; nicht angegebene bleiben unverändert.
 
+**Verfügbar in den Modi `drafts` und `full`**, nicht in `read-only` (siehe `safety/operating-modes.md`). Das Feld `hint` im Ergebnis hängt vom Modus ab: `send_draft` wird nur in `full` genannt (siehe `create_draft`).
+
 ## Parameter
 
 | Parameter | Typ | Beschreibung |
@@ -23,7 +25,7 @@
 | `subject` | string | Neuer Betreff (optional) |
 | `body` | string | Neuer Body (ersetzt komplett, auch Zitate) |
 | `html` | string | Neuer HTML-Body (optional; leerer String entfernt HTML) |
-| `addAttachments` | array | Pfade zu neuen Anhängen (optional) |
+| `addAttachments` | array | Pfade zu neuen Anhängen aus erlaubten Verzeichnissen (optional) |
 | `removeAttachments` | array | Indizes zu löschender Anhänge (optional) |
 
 ## Rückgabe
@@ -85,7 +87,7 @@ Falls `body` oder `html` neu, werden alte Inline-Bilder (nur im alten HTML refer
 
 - **Behalten:** Alte Anhänge, die nicht in `removeAttachments` aufgelistet sind
 - **Entfernen:** Mit Index aus `removeAttachments`
-- **Hinzufügen:** Mit `addAttachments` (absolute Pfade)
+- **Hinzufügen:** Mit `addAttachments` (absolute Pfade in erlaubten Verzeichnissen, siehe `safety/attachment-roots.md`; die Prüfung gilt nur für neu angegebene Pfade, nicht für übernommene Anhänge)
 - **Signaturen:** Werden nicht übernommen (wie in `create_draft`)
 
 ## Fehlerbehandlung
@@ -93,6 +95,8 @@ Falls `body` oder `html` neu, werden alte Inline-Bilder (nur im alten HTML refer
 Falls Entwurf-UID nicht existiert: IMAP-Fehler.
 
 Falls Anhang-Datei nicht existiert: `Error: Attachment file not found: ...`
+
+Falls ein neuer Anhang außerhalb der erlaubten Verzeichnisse liegt oder versteckt ist: `Error: Attachment refused: ...`. Der Entwurf bleibt unverändert, es wird kein neuer angelegt.
 
 Falls `cc: ""` oder `bcc: ""`: Diese Felder werden gelöscht (leer).
 
@@ -108,6 +112,8 @@ Falls `cc: ""` oder `bcc: ""`: Diese Felder werden gelöscht (leer).
 
 Changes a saved draft: recipients, subject, body, HTML, attachments. Only specified fields are replaced; unspecified fields remain unchanged.
 
+**Available in `drafts` and `full` mode**, not in `read-only` (see `safety/operating-modes.md`). The `hint` field in the result depends on the mode: `send_draft` is named only in `full` (see `create_draft`).
+
 ## Parameters
 
 | Parameter | Type | Description |
@@ -119,7 +125,7 @@ Changes a saved draft: recipients, subject, body, HTML, attachments. Only specif
 | `subject` | string | New subject (optional) |
 | `body` | string | New body (replaces completely, including quotes) |
 | `html` | string | New HTML body (optional; empty string removes HTML) |
-| `addAttachments` | array | Paths to new attachments (optional) |
+| `addAttachments` | array | Paths to new attachments from allowed directories (optional) |
 | `removeAttachments` | array | Indexes of attachments to remove (optional) |
 
 ## Return
@@ -181,7 +187,7 @@ If `body` or `html` is new, old inline images (referenced only in old HTML) are 
 
 - **Keep:** Old attachments not listed in `removeAttachments`
 - **Remove:** By index from `removeAttachments`
-- **Add:** Via `addAttachments` (absolute paths)
+- **Add:** Via `addAttachments` (absolute paths in allowed directories, see `safety/attachment-roots.md`; the check applies only to newly given paths, not to carried-over attachments)
 - **Signatures:** Are not carried over (as in `create_draft`)
 
 ## Error handling
@@ -189,5 +195,7 @@ If `body` or `html` is new, old inline images (referenced only in old HTML) are 
 If draft UID does not exist: IMAP error.
 
 If attachment file does not exist: `Error: Attachment file not found: ...`
+
+If a new attachment is outside the allowed directories or hidden: `Error: Attachment refused: ...`. The draft stays unchanged, no new one is created.
 
 If `cc: ""` or `bcc: ""`: these fields are deleted (emptied).

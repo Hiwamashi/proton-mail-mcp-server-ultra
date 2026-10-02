@@ -12,6 +12,8 @@
 
 Antwortet auf eine Mail und versendet sie sofort. Setzt automatisch Empfänger, Betreff und Zitat.
 
+**Verfügbar nur im Modus `full`** (`PROTON_MCP_MODE=full`). In `drafts` (Standard) und `read-only` ist das Tool nicht registriert; stattdessen `create_draft` mit `replyToUid` verwenden. Siehe `safety/operating-modes.md`.
+
 ## Parameter
 
 | Parameter | Typ | Default | Beschreibung |
@@ -22,7 +24,7 @@ Antwortet auf eine Mail und versendet sie sofort. Setzt automatisch Empfänger, 
 | `html` | string | – | HTML-Version der Antwort (optional) |
 | `replyAll` | boolean | `false` | Allen antworten (To + Cc) |
 | `quoteOriginal` | boolean | `true` | Zitat der Original-Mail anhängen |
-| `attachments` | array | – | Absolute Pfade zu lokalen Dateien (optional) |
+| `attachments` | array | – | Absolute Pfade zu lokalen Dateien aus erlaubten Verzeichnissen (optional) |
 
 ## Rückgabe
 
@@ -69,7 +71,7 @@ Falls keine Empfänger bestimmt werden können (Original-Mail hat kein From, To,
 Error: Could not determine any recipient for the reply.
 ```
 
-Falls Anhang nicht existiert: Error (siehe `send_email`).
+Falls Anhang nicht existiert oder außerhalb der erlaubten Verzeichnisse liegt: Error (siehe `send_email` und `safety/attachment-roots.md`).
 
 ---
 
@@ -83,6 +85,8 @@ Falls Anhang nicht existiert: Error (siehe `send_email`).
 
 Replies to a message and sends it immediately. Automatically sets recipients, subject and quote.
 
+**Available only in `full` mode** (`PROTON_MCP_MODE=full`). In `drafts` (default) and `read-only` the tool is not registered; use `create_draft` with `replyToUid` instead. See `safety/operating-modes.md`.
+
 ## Parameters
 
 | Parameter | Type | Default | Description |
@@ -93,7 +97,7 @@ Replies to a message and sends it immediately. Automatically sets recipients, su
 | `html` | string | – | HTML version of the reply (optional) |
 | `replyAll` | boolean | `false` | Reply to all (To + Cc) |
 | `quoteOriginal` | boolean | `true` | Append quote of original message |
-| `attachments` | array | – | Absolute paths to local files (optional) |
+| `attachments` | array | – | Absolute paths to local files from allowed directories (optional) |
 
 ## Return
 
@@ -140,4 +144,4 @@ If no recipients can be determined (original message has no From, To, Reply-To):
 Error: Could not determine any recipient for the reply.
 ```
 
-If attachment does not exist: error (see `send_email`).
+If an attachment does not exist or is outside the allowed directories: error (see `send_email` and `safety/attachment-roots.md`).

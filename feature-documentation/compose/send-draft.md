@@ -12,6 +12,8 @@
 
 Versendet einen Entwurf und entfernt ihn aus den Entwürfen.
 
+**Verfügbar nur im Modus `full`** (`PROTON_MCP_MODE=full`). In `drafts` (Standard) und `read-only` ist das Tool nicht registriert; der Nutzer prüft und sendet den Entwurf dann in Proton Mail. Siehe `safety/operating-modes.md`. Annotation: `openWorldHint: true`.
+
 ## Parameter
 
 | Parameter | Typ | Beschreibung |
@@ -80,6 +82,8 @@ Falls das Löschen des Entwurfs scheitert: `warning` im Response, aber Mail ist 
 ## Purpose
 
 Sends a draft and removes it from drafts.
+
+**Available only in `full` mode** (`PROTON_MCP_MODE=full`). In `drafts` (default) and `read-only` the tool is not registered; the user then reviews and sends the draft in Proton Mail. See `safety/operating-modes.md`. Annotation: `openWorldHint: true`.
 
 ## Parameters
 

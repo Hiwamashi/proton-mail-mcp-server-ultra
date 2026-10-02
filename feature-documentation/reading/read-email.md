@@ -23,7 +23,7 @@ Liest eine Mail komplett: Header (From, To, Cc, Bcc, Reply-To, Subject, Message-
 | `stripQuoted` | boolean | `false` | Zitat-Historie unter dem neuen Content entfernen |
 | `offset` | number | `0` | Startposition im Body (für Paging bei langen Mails) |
 | `maxChars` | number | `20000` | Max. Zeichen des Body (min. 500, max. 100000) |
-| `markAsRead` | boolean | `false` | Mail danach als gelesen markieren |
+| `markAsRead` | boolean | `false` | Mail danach als gelesen markieren (im Modus `read-only` nicht erlaubt) |
 
 ## Rückgabe
 
@@ -73,6 +73,14 @@ Jede Zeile zeigt:
 ### markAsRead
 
 Falls `true` und die Mail war ungelesen (`\Seen`-Flag fehlte), wird es gesetzt. Das `Flags`-Feld in der Ausgabe aktualisiert sich entsprechend.
+
+**Im Modus `read-only` wird `markAsRead: true` abgelehnt**, weil das Setzen des Flags das Postfach ändert. Das Tool wirft den Fehler, bevor es das Postfach berührt, und ändert nichts:
+
+```
+Marking an email as read is not available in `read-only` mode (markAsRead was ignored and nothing was changed). Read it without markAsRead.
+```
+
+Beschreibung von `read_email` und des Parameters `markAsRead` passen sich dem Modus an (`readEmailDescription`, `markAsReadDescription` in `src/modes.js`). Das Tool ist in allen Modi verfügbar; siehe `safety/operating-modes.md`.
 
 ### BODY.PEEK
 
@@ -136,7 +144,7 @@ Reads a message completely: headers (From, To, Cc, Bcc, Reply-To, Subject, Messa
 | `stripQuoted` | boolean | `false` | Remove quoted reply history below new content |
 | `offset` | number | `0` | Start position in body (for paging long messages) |
 | `maxChars` | number | `20000` | Max characters of body (min 500, max 100000) |
-| `markAsRead` | boolean | `false` | Mark message as read afterwards |
+| `markAsRead` | boolean | `false` | Mark message as read afterwards (not allowed in `read-only` mode) |
 
 ## Return
 
@@ -186,6 +194,14 @@ Each line shows:
 ### markAsRead
 
 If `true` and the message was unread (no `\Seen` flag), it is set. The `Flags` field in the output is updated accordingly.
+
+**In `read-only` mode `markAsRead: true` is refused**, because setting the flag changes the mailbox. The tool throws the error before touching the mailbox and changes nothing:
+
+```
+Marking an email as read is not available in `read-only` mode (markAsRead was ignored and nothing was changed). Read it without markAsRead.
+```
+
+The description of `read_email` and of the `markAsRead` parameter adapt to the mode (`readEmailDescription`, `markAsReadDescription` in `src/modes.js`). The tool is available in all modes; see `safety/operating-modes.md`.
 
 ### BODY.PEEK
 

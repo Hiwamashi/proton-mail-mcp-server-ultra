@@ -12,6 +12,8 @@
 
 Speichert eine Mail als Entwurf, ohne sie zu versenden. Der Entwurf ist sichtbar in Proton Mail unter Entwürfe und kann dort weiterbearbeitet werden.
 
+**Verfügbar in den Modi `drafts` und `full`**, nicht in `read-only` (siehe `safety/operating-modes.md`).
+
 ## Parameter
 
 | Parameter | Typ | Beschreibung |
@@ -22,7 +24,7 @@ Speichert eine Mail als Entwurf, ohne sie zu versenden. Der Entwurf ist sichtbar
 | `html` | string | HTML-Version (optional) |
 | `cc` | string | CC-Empfänger (optional) |
 | `bcc` | string | BCC-Empfänger (optional) |
-| `attachments` | array | Absolute Pfade zu lokalen Dateien (optional) |
+| `attachments` | array | Absolute Pfade zu lokalen Dateien aus erlaubten Verzeichnissen (optional) |
 | `replyToUid` | number | UID der Original-Mail (optional, für Antwort-Entwürfe) |
 | `replyFolder` | string | Ordner der Original-Mail (Standard: `"INBOX"`) |
 | `replyAll` | boolean | Alle antworten (Standard: `false`) |
@@ -46,6 +48,8 @@ MCP-Text-Block:
   hint: "The draft is visible in Proton Mail under Drafts. Use send_draft to send it or update_draft to change it.",
 }
 ```
+
+**Der `hint` hängt vom Modus ab** (`draftHint(mode)` in `src/modes.js`): Er nennt `send_draft` nur im Modus `full`. In `drafts` lautet er: `The draft is visible in Proton Mail under Drafts. Use update_draft to change it. The user reviews and sends the draft in Proton Mail.` Das Beispiel oben zeigt den Hinweis aus `full`. Das Tool ist in `read-only` nicht verfügbar.
 
 ## Verhalten
 
@@ -87,6 +91,8 @@ Falls kein Ordner zum Speichern gefunden wird: IMAP-Fehler.
 
 Falls Anhang nicht existiert: `Error: Attachment file not found: ...`
 
+Falls Anhang außerhalb der erlaubten Verzeichnisse liegt oder versteckt ist: `Error: Attachment refused: ...` (siehe `safety/attachment-roots.md`). Es wird kein Entwurf angelegt.
+
 ---
 
 ## English
@@ -99,6 +105,8 @@ Falls Anhang nicht existiert: `Error: Attachment file not found: ...`
 
 Saves a message as a draft without sending it. The draft is visible in Proton Mail under Drafts and can be edited there.
 
+**Available in `drafts` and `full` mode**, not in `read-only` (see `safety/operating-modes.md`).
+
 ## Parameters
 
 | Parameter | Type | Description |
@@ -109,7 +117,7 @@ Saves a message as a draft without sending it. The draft is visible in Proton Ma
 | `html` | string | HTML version (optional) |
 | `cc` | string | CC recipients (optional) |
 | `bcc` | string | BCC recipients (optional) |
-| `attachments` | array | Absolute paths to local files (optional) |
+| `attachments` | array | Absolute paths to local files from allowed directories (optional) |
 | `replyToUid` | number | UID of original message (optional, for reply drafts) |
 | `replyFolder` | string | Folder of original message (default: `"INBOX"`) |
 | `replyAll` | boolean | Reply to all (default: `false`) |
@@ -133,6 +141,8 @@ MCP text block:
   hint: "The draft is visible in Proton Mail under Drafts. Use send_draft to send it or update_draft to change it.",
 }
 ```
+
+**The `hint` depends on the mode** (`draftHint(mode)` in `src/modes.js`): it names `send_draft` only in `full` mode. In `drafts` it reads: `The draft is visible in Proton Mail under Drafts. Use update_draft to change it. The user reviews and sends the draft in Proton Mail.` The example above shows the hint from `full`. The tool is not available in `read-only`.
 
 ## Behavior
 
@@ -173,3 +183,5 @@ Error: No message with UID 999 in folder "INBOX".
 If no folder found to save: IMAP error.
 
 If attachment does not exist: `Error: Attachment file not found: ...`
+
+If an attachment is outside the allowed directories or hidden: `Error: Attachment refused: ...` (see `safety/attachment-roots.md`). No draft is created.
