@@ -109,7 +109,7 @@ try {
     if (fa.length) {
       downloadMatch = true;
       for (let i = 0; i < Math.min(3, fa.length); i++) {
-        const content = await downloadPart(client, uid, partial.partial.parts[i]);
+        const content = await downloadPart(client, uid, partial.partial.parts[i], partial.partial.encodings[i]);
         if (!content || hash(content.toString("base64")) !== hash(fa[i].content.toString("base64"))) { downloadMatch = false; mism.push(`download[${i}]`); }
       }
     }

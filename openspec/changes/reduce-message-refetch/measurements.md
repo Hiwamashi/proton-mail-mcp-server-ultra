@@ -62,6 +62,22 @@ UID 8495 (29,7 MB, 11 Anhänge, Index 0 ist klein):
 
 Einordnung: Gegen die lokale Bridge ist der volle Download schnell (etwa 125 bis 400 ms für 20 bis 47 MB). Der Cache spart den wiederholten Abruf deutlich (zweites `read_email` 2 bis 5 ms statt 265 bis 372 ms). Der Teilpfad senkt das erste `read_email` bei Nachrichten mit großem Anhang (UID 32864: 600 auf 295 ms), macht `get_attachment` bei einem großen einzelnen Anhang aber langsamer (UID 32864: etwa 400 auf etwa 1000 ms), weil der Anhang in 1-MB-Blöcken geladen und nicht gecacht wird. Der Vorteil des Teilpfads liegt vor allem in der übertragenen Datenmenge, nicht in der Zeit gegen eine lokale Bridge. Einzelwerte (UID 8495 "Nachher", read 1) enthalten Ausreißer.
 
+### Nach der Korrekturrunde (Commit 83e5acf)
+
+Anhangsteile werden jetzt mit einer einzigen Anfrage geholt und im Prozess dekodiert, nicht mehr in 1-MB-Blöcken. Der Vergleich über alle 106 Nachrichten wurde wiederholt: Anhangsliste, Text/HTML, Kopfzeilen und Anhangsinhalt per Teil-Download sind weiterhin in 106 von 106 identisch, 0 Rückfälle, 0 Abweichungen.
+
+UID 32864, Zeiten in ms (die Zeile "vor der Korrekturrunde" bleibt zum Vergleich stehen):
+
+| Einstellung | read 1 | attach 1 | read 2 | attach 2 |
+|---|---|---|---|---|
+| Vorher (Cache aus, Teilpfad aus) | 615 | 408 | 374 | 421 |
+| nur Teilpfad, vor der Korrekturrunde | 304 | 1129 | 121 | 1539 |
+| nur Teilpfad, nach der Korrekturrunde | 329 | 236 | 72 | 199 |
+| Nachher (Standard), vor der Korrekturrunde | 295 | 1028 | 2 | 1008 |
+| Nachher (Standard), nach der Korrekturrunde | 310 | 177 | 2 | 131 |
+
+Damit ist `get_attachment` mit den Standardwerten schneller als vorher (etwa 130 bis 180 ms statt etwa 410 ms); die frühere Verlangsamung von etwa 1000 ms ist behoben.
+
 ## English
 
 Live measurement against the locally running Proton Mail Bridge (127.0.0.1, read-only). Only UIDs, sizes, counts, booleans and timings are recorded, no mail content. Numbers vary because the Bridge is local and there is no network time; orders of magnitude matter, not single milliseconds.
@@ -121,3 +137,19 @@ UID 8495 (29.7 MB, 11 attachments, index 0 is small):
 | After (defaults) | 1596 | 777 | 5 | 482 |
 
 Interpretation: against the local Bridge the full download is fast (about 125 to 400 ms for 20 to 47 MB). The cache clearly saves repeated fetches (second `read_email` 2 to 5 ms instead of 265 to 372 ms). The partial path lowers the first `read_email` for messages with a large attachment (UID 32864: 600 to 295 ms) but makes `get_attachment` slower for one large attachment (UID 32864: about 400 to about 1000 ms), because the attachment is downloaded in 1 MB chunks and not cached. The benefit of the partial path is mainly the transferred data volume, not time against a local Bridge. Single values (UID 8495 "after", read 1) include outliers.
+
+### After the fix round (commit 83e5acf)
+
+Attachment parts are now fetched with a single request and decoded in-process instead of in 1 MB chunks. The comparison over all 106 messages was repeated: attachment list, text/HTML, headers and attachment content via part download are still identical in 106 of 106, 0 fallbacks, 0 mismatches.
+
+UID 32864, timings in ms (the "before fix round" rows are kept for the record):
+
+| Setting | read 1 | attach 1 | read 2 | attach 2 |
+|---|---|---|---|---|
+| Before (cache off, partial off) | 615 | 408 | 374 | 421 |
+| partial only, before fix round | 304 | 1129 | 121 | 1539 |
+| partial only, after fix round | 329 | 236 | 72 | 199 |
+| After (defaults), before fix round | 295 | 1028 | 2 | 1008 |
+| After (defaults), after fix round | 310 | 177 | 2 | 131 |
+
+With the defaults `get_attachment` is now faster than before (about 130 to 180 ms instead of about 410 ms); the earlier slowdown of about 1000 ms is gone.
