@@ -5,7 +5,6 @@ import { CONFIG } from "./config.js";
 import { extractBody, formatAddresses, formatSize, htmlToText, normalizeText, paginate, describeAttachments } from "./content.js";
 
 const INLINE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
-const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 const TEXT_TYPES = /^(text\/|application\/(json|xml|csv|x-csv|yaml|x-yaml|javascript|ics)|.*\+xml$)/i;
 const TEXT_EXTENSIONS = new Set([".txt", ".csv", ".json", ".xml", ".md", ".log", ".ics", ".vcf", ".yaml", ".yml"]);
 
@@ -57,20 +56,29 @@ function pagedText(header, text, offset, maxChars) {
 }
 
 // Converts an attachment into MCP content blocks. Falls back to saving it to disk.
-export async function attachmentToContent(attachment, { uid, index, offset = 0, maxChars = 20000, save = false }) {
+export async function attachmentToContent(attachment, { uid, index, offset = 0, maxChars = 20000, save = false, maxInlineImageBytes = CONFIG.maxInlineImageBytes, directory = CONFIG.attachmentDir }) {
   const name = attachment.filename || "(unnamed)";
   const type = (attachment.contentType || "application/octet-stream").toLowerCase();
   const header = `Attachment [${index}] ${name} (${type}, ${formatSize(attachment.size)}) from UID ${uid}`;
 
   if (save) {
-    const path = await saveAttachment(attachment, uid);
+    const path = await saveAttachment(attachment, uid, directory);
     return [{ type: "text", text: `${header}\nSaved to: ${path}` }];
   }
 
-  if (INLINE_IMAGE_TYPES.has(type) && attachment.size <= MAX_INLINE_IMAGE_BYTES) {
+  if (INLINE_IMAGE_TYPES.has(type)) {
+    if (attachment.size <= maxInlineImageBytes) {
+      return [
+        { type: "text", text: header },
+        { type: "image", data: attachment.content.toString("base64"), mimeType: type },
+      ];
+    }
+    const path = await saveAttachment(attachment, uid, directory);
     return [
-      { type: "text", text: header },
-      { type: "image", data: attachment.content.toString("base64"), mimeType: type },
+      {
+        type: "text",
+        text: `${header}\nImage exceeds the inline limit of ${formatSize(maxInlineImageBytes)} (PROTON_MCP_MAX_INLINE_IMAGE_BYTES) and is not shown inline. Saved to: ${path}`,
+      },
     ];
   }
 
@@ -81,7 +89,7 @@ export async function attachmentToContent(attachment, { uid, index, offset = 0, 
     } catch {
       // fall through to saving; the PDF may be encrypted or damaged
     }
-    const path = await saveAttachment(attachment, uid);
+    const path = await saveAttachment(attachment, uid, directory);
     return [{ type: "text", text: `${header}\nNo extractable text (scanned or protected PDF). Saved to: ${path}` }];
   }
 
@@ -110,6 +118,6 @@ export async function attachmentToContent(attachment, { uid, index, offset = 0, 
     return [{ type: "text", text: pagedText(header, text, offset, maxChars) }];
   }
 
-  const path = await saveAttachment(attachment, uid);
+  const path = await saveAttachment(attachment, uid, directory);
   return [{ type: "text", text: `${header}\nThis file type cannot be shown directly. Saved to: ${path}` }];
 }

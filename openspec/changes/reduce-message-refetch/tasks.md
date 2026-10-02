@@ -15,7 +15,7 @@
 
 ## 3. Inline image limit
 
-- [ ] 3.1 Apply `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` in `src/attachments.js` and add the "exceeds the inline limit" message; verify with fixtures for a 200 KB and a 3 MB image
+- [x] 3.1 Apply `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` in `src/attachments.js` and add the "exceeds the inline limit" message; verify with fixtures for a 200 KB and a 3 MB image
 
 ## 4. Documentation
 
