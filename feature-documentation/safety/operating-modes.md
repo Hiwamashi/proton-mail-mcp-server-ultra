@@ -59,7 +59,7 @@ Zwei Verhaltensunterschiede innerhalb eines Tools:
 
 `defineTool(server, name, { modes, ...config }, handler, mode)` in `src/tools/util.js` registriert ein Tool nur, wenn `toolAvailable(modes, mode)` wahr ist. Die Listen `DRAFT_MODES` und `FULL_ONLY` stehen in `src/modes.js`, die Liste aller Modi (`MODES`) in `src/config.js`. Fehlt `modes` an einer Tool-Definition, wirft `defineTool` einen Fehler (kein stilles „alle Modi“). Die Modus-Zuordnung steht direkt an jeder Tool-Definition in `src/tools/mailbox.js` und `src/tools/compose.js`. Die Registrierfunktionen `registerMailboxTools` und `registerComposeTools` nehmen `mode` als Option (Standard `CONFIG.mode`), damit Tests jeden Modus prüfen können.
 
-Neue Tools müssen `modes` setzen. Ohne `modes` gilt ein Tool in allen Modi.
+Neue Tools müssen `modes` setzen, sonst bricht die Registrierung mit einem Fehler ab.
 
 ### Modusabhängige Texte
 
@@ -179,7 +179,7 @@ Two behavior differences inside a tool:
 
 `defineTool(server, name, { modes, ...config }, handler, mode)` in `src/tools/util.js` registers a tool only if `toolAvailable(modes, mode)` is true. The lists `DRAFT_MODES` and `FULL_ONLY` live in `src/modes.js`, the list of all modes (`MODES`) in `src/config.js`. If a tool definition has no `modes`, `defineTool` throws (no silent "all modes"). The mode assignment sits right at each tool definition in `src/tools/mailbox.js` and `src/tools/compose.js`. The registration functions `registerMailboxTools` and `registerComposeTools` take `mode` as an option (default `CONFIG.mode`) so tests can check every mode.
 
-New tools must set `modes`. Without `modes`, a tool is available in all modes.
+New tools must set `modes`; otherwise registration fails with an error.
 
 ### Mode-dependent texts
 
