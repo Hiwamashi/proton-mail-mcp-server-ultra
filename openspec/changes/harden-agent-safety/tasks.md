@@ -2,8 +2,8 @@
 
 ## 1. Configuration
 
-- [ ] 1.1 Add `mode` (`read-only` | `drafts` | `full`, default `drafts`) and `attachmentRoots` to `src/config.js`; exit with an error for unknown modes and verify with a unit test for parsing and defaults
-- [ ] 1.2 Print the active mode and attachment roots to stderr at startup and verify by starting `dist/server.mjs` with each mode
+- [x] 1.1 Add `mode` (`read-only` | `drafts` | `full`, default `drafts`) and `attachmentRoots` to `src/config.js`; exit with an error for unknown modes and verify with a unit test for parsing and defaults
+- [x] 1.2 Print the active mode and attachment roots to stderr at startup and verify by starting `dist/server.mjs` with each mode
 
 ## 2. Mode enforcement
 

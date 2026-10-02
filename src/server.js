@@ -1,11 +1,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { assertCredentials } from "./config.js";
+import { assertCredentials, assertMode, logStartupConfig } from "./config.js";
 import { shutdownConnections } from "./connections.js";
 import { registerMailboxTools } from "./tools/mailbox.js";
 import { registerComposeTools } from "./tools/compose.js";
 
+assertMode();
 assertCredentials();
+logStartupConfig();
 
 const server = new McpServer({ name: "proton-mail", version: "1.0.0" });
 registerMailboxTools(server);

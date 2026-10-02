@@ -28,6 +28,41 @@ function readCredentialsFile() {
   return values;
 }
 
+export const MODES = ["read-only", "drafts", "full"];
+export const DEFAULT_MODE = "drafts";
+
+// Validates the operating mode; empty/unset falls back to the default.
+export function parseMode(value) {
+  const mode = (value ?? "").trim() || DEFAULT_MODE;
+  if (!MODES.includes(mode)) {
+    throw new Error(
+      `Invalid PROTON_MCP_MODE "${mode}". Valid values: ${MODES.map((m) => `"${m}"`).join(", ")}.`
+    );
+  }
+  return mode;
+}
+
+function expandHome(p, home) {
+  if (p === "~") return home;
+  if (p.startsWith("~/")) return join(home, p.slice(2));
+  return p;
+}
+
+// Parses PROTON_MCP_ATTACHMENT_ROOTS: comma-separated, "~" expanded, trimmed, empty entries dropped.
+// Returns the string "*" for unrestricted access, otherwise an array of paths (not realpath-resolved).
+// Unset/empty yields the defaults: ~/Downloads, ~/Documents, ~/Desktop and attachmentDir.
+export function parseAttachmentRoots(value, attachmentDir, home = homedir()) {
+  const entries = (value ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+  if (entries.length === 0) {
+    return [join(home, "Downloads"), join(home, "Documents"), join(home, "Desktop"), attachmentDir];
+  }
+  if (entries.length === 1 && entries[0] === "*") return "*";
+  return entries.map((e) => expandHome(e, home));
+}
+
 // Environment variables win over the credentials file.
 function loadConfig() {
   const file = readCredentialsFile();
@@ -42,7 +77,21 @@ function loadConfig() {
     .map((a) => a.trim().toLowerCase())
     .filter(Boolean);
 
+  const attachmentDir = get("PROTON_MCP_ATTACHMENT_DIR", join(homedir(), "Downloads", "Proton-Anhänge"));
+
+  // An invalid mode must not exit on import (tests); assertMode() reports it at startup.
+  let mode;
+  let modeError;
+  try {
+    mode = parseMode(get("PROTON_MCP_MODE"));
+  } catch (err) {
+    modeError = err.message;
+  }
+
   return {
+    mode,
+    modeError,
+    attachmentRoots: parseAttachmentRoots(get("PROTON_MCP_ATTACHMENT_ROOTS"), attachmentDir),
     host: get("PROTON_BRIDGE_HOST", "127.0.0.1"),
     imapPort: parseInt(get("PROTON_BRIDGE_IMAP_PORT", "1143"), 10),
     smtpPort: parseInt(get("PROTON_BRIDGE_SMTP_PORT", "1025"), 10),
@@ -53,7 +102,7 @@ function loadConfig() {
     from: fromName ? { name: fromName, address: fromAddress } : fromAddress,
     selfAddresses: [...new Set([username, fromAddress, ...aliases].filter(Boolean).map((a) => a.toLowerCase()))],
     imapIdleTimeoutMs: parseInt(get("PROTON_BRIDGE_IDLE_TIMEOUT_MS", "300000"), 10),
-    attachmentDir: get("PROTON_MCP_ATTACHMENT_DIR", join(homedir(), "Downloads", "Proton-Anhänge")),
+    attachmentDir,
   };
 }
 
@@ -70,4 +119,18 @@ export function assertCredentials() {
     );
     process.exit(1);
   }
+}
+
+export function assertMode() {
+  if (CONFIG.modeError) {
+    console.error(`Error: ${CONFIG.modeError}`);
+    process.exit(1);
+  }
+}
+
+// stderr only — stdout is the MCP channel.
+export function logStartupConfig() {
+  const roots = CONFIG.attachmentRoots === "*" ? "* (unrestricted)" : CONFIG.attachmentRoots.join(", ");
+  console.error(`proton-mail-mcp: mode=${CONFIG.mode}`);
+  console.error(`proton-mail-mcp: attachment roots=${roots}`);
 }
