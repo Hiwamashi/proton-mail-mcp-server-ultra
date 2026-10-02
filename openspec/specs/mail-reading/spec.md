@@ -50,15 +50,19 @@ Tools that list messages SHALL describe each message with `uid`, ISO `date`, `fr
 - **THEN** an error says the `since` date is invalid and must use `YYYY-MM-DD`
 
 ### Requirement: Read email without side effects
-`read_email` SHALL return a header block (UID, folder, flags, From, To, Cc, Bcc, Reply-To if different from From, Date, Subject, Message-ID, In-Reply-To), a numbered attachment list and the body. Reading SHALL NOT mark the message as read unless `markAsRead: true` is given.
+`read_email` SHALL return a header block (UID, folder, flags, From, To, Cc, Bcc, Reply-To if different from From, Date, Subject, Message-ID, In-Reply-To), a numbered attachment list and the body. Reading SHALL NOT mark the message as read unless `markAsRead: true` is given. In `read-only` mode `markAsRead: true` SHALL be refused with an error and the message SHALL NOT be returned marked.
 
 #### Scenario: Default read
 - **WHEN** an unread message is read without `markAsRead`
 - **THEN** it stays unread
 
 #### Scenario: Mark while reading
-- **WHEN** `markAsRead: true` is given
+- **WHEN** `markAsRead: true` is given in `drafts` or `full` mode
 - **THEN** the message is marked as read and the returned flags include `\Seen`
+
+#### Scenario: Mark while reading in read-only mode
+- **WHEN** `markAsRead: true` is given in `read-only` mode
+- **THEN** an error says that marking is not available in `read-only` mode and the message stays unread
 
 ### Requirement: Readable body selection
 `read_email` SHALL choose the body by `format`: `auto` (default) uses the text part and falls back to HTML converted to text when there is no text part, when `includeLinks` is set, or when more than 15 % of the text part consists of URLs; `text` uses only the text part; `html` always converts HTML to text; `raw_html` returns the original HTML. HTML conversion SHALL drop images, styles, scripts and the head, keep headings and tables, and show link URLs as `<url>` only with `includeLinks: true`. Invisible padding characters SHALL be removed and runs of blank lines collapsed. The header SHALL state the body source (`text`, `html`, `raw_html` or `none`).
