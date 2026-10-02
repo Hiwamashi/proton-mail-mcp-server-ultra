@@ -1,0 +1,42 @@
+schema: spec-driven
+
+context: |
+  Product: MCP server giving local AI agents (any MCP client, not only Claude) access to a
+  Proton Mail mailbox through the locally running Proton Mail Bridge (IMAP 127.0.0.1:1143,
+  SMTP 1025 with STARTTLS, self-signed cert). Fork of tamnys/proton-mail-mcp-server.
+  Tech stack: Node >= 20, ESM, @modelcontextprotocol/sdk (McpServer, stdio transport), zod
+  input schemas, imapflow, nodemailer (+ MailComposer), mailparser, html-to-text, unpdf.
+  Bundled with esbuild to dist/server.mjs. Tests: node:test (npm test), live smoke test
+  scripts/smoke.mjs against a running Bridge.
+  Layout: src/connections.js (shared IMAP client, SMTP per send), src/content.js (body
+  extraction, paging), src/attachments.js, src/compose.js (reply logic, MIME build),
+  src/tools/*.js (tool registration via defineTool).
+  Domain rules: UIDs are only valid within their folder; reading uses BODY.PEEK and never
+  sets \Seen implicitly; IMAP writes and SMTP sends are never retried after a connection
+  error (no duplicates); drafts are replaced append-first-then-delete; "All Mail" contains
+  every message; Proton labels appear as folders under "Labels/", user folders under
+  "Folders/". Mail content is untrusted input for the agent (prompt injection).
+  Conventions: code, identifiers, comments, commit messages and MCP tool descriptions in
+  English. Human documentation (README, feature-documentation/, PROGRESS.md) in German and
+  English in one file, German first. Every new or changed feature is documented in
+  feature-documentation/ (one file per function) and tracked in PROGRESS.md.
+
+rules:
+  proposal:
+    - State explicitly whether the change alters default behavior for existing users (breaking) and how they opt back.
+  specs:
+    - Requirements describe observable tool behavior (inputs, outputs, errors), not internal implementation.
+  tasks:
+    - Include tasks for tests (node:test with MIME fixtures where relevant), feature-documentation (DE+EN), README (DE+EN) and PROGRESS.md.
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
