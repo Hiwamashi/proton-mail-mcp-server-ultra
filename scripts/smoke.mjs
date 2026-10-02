@@ -18,6 +18,7 @@ async function call(name, args = {}) {
   return { result, text: first, json: () => JSON.parse(first) };
 }
 
+console.log("instructions:", client.getInstructions());
 const { tools } = await client.listTools();
 console.log("tools:", tools.map((t) => t.name).join(", "));
 

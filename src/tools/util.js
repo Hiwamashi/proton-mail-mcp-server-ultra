@@ -1,5 +1,6 @@
 import { CONFIG } from "../config.js";
 import { toolAvailable } from "../modes.js";
+import { TOOL_META } from "./annotations.js";
 import { NotFoundError } from "../connections.js";
 import { formatAddress } from "../content.js";
 
@@ -16,7 +17,9 @@ function errorResult(error) {
 // `config.modes` lists the operating modes the tool exists in; in any other mode it is not registered.
 export function defineTool(server, name, { modes, ...config }, handler, mode = CONFIG.mode) {
   if (!toolAvailable(modes, mode)) return false;
-  server.registerTool(name, config, async (args) => {
+  const meta = TOOL_META[name];
+  if (!meta) throw new Error(`No title/annotations defined for tool ${name}`);
+  server.registerTool(name, { ...meta, ...config }, async (args) => {
     try {
       return await handler(args);
     } catch (error) {

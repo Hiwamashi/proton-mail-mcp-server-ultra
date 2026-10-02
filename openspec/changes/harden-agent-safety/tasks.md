@@ -19,8 +19,8 @@
 
 ## 4. Annotations and instructions
 
-- [ ] 4.1 Add `title` and annotations to every tool; verify with a test that every registered tool declares `title`, `readOnlyHint` and `openWorldHint`
-- [ ] 4.2 Pass `instructions` (untrusted content + active mode) to `McpServer`; verify via `scripts/smoke.mjs` that the initialize result contains them
+- [x] 4.1 Add `title` and annotations to every tool; verify with a test that every registered tool declares `title`, `readOnlyHint` and `openWorldHint`
+- [x] 4.2 Pass `instructions` (untrusted content + active mode) to `McpServer`; verify via `scripts/smoke.mjs` that the initialize result contains them
 
 ## 5. Documentation
 
