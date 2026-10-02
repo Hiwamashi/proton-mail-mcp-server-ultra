@@ -42,7 +42,7 @@ export function parseMode(value) {
   return mode;
 }
 
-function expandHome(p, home) {
+export function expandHome(p, home) {
   if (p === "~") return home;
   if (p.startsWith("~/")) return join(home, p.slice(2));
   return p;

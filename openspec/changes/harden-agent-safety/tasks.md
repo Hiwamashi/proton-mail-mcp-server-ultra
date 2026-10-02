@@ -14,8 +14,8 @@
 
 ## 3. Attachment path check
 
-- [ ] 3.1 Implement `assertAttachable` in `src/safety.js` (absolute, realpath, regular file, roots, hidden segments, `*`); verify with tests for Documents file, `~/.ssh` key, `..` traversal, symlink escape, directory path and `*`
-- [ ] 3.2 Use it in `fileAttachments` for `send_email`, `reply_to_email`, `create_draft` and `update_draft`; verify that a refused path creates no draft
+- [x] 3.1 Implement `assertAttachable` in `src/safety.js` (absolute, realpath, regular file, roots, hidden segments, `*`); verify with tests for Documents file, `~/.ssh` key, `..` traversal, symlink escape, directory path and `*`
+- [x] 3.2 Use it in `fileAttachments` for `send_email`, `reply_to_email`, `create_draft` and `update_draft`; verify that a refused path creates no draft
 
 ## 4. Annotations and instructions
 

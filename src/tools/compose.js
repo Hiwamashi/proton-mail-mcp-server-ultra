@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { access } from "node:fs/promises";
 import { basename } from "node:path";
-import { CONFIG } from "../config.js";
+import { homedir } from "node:os";
+import { CONFIG, expandHome } from "../config.js";
+import { assertAttachable } from "../safety.js";
 import { withImapClient, withMailbox, fetchParsed, getSpecialFolder, sendMail } from "../connections.js";
 import { extractBody, addressObjects, formatAddress } from "../content.js";
 import {
@@ -24,15 +25,12 @@ const attachmentsArg = z
   .optional()
   .describe("Absolute paths of local files to attach");
 
-async function fileAttachments(paths = []) {
+// Every path must pass assertAttachable before anything is sent or saved.
+export async function fileAttachments(paths = []) {
   const result = [];
   for (const path of paths) {
-    try {
-      await access(path);
-    } catch {
-      throw new Error(`Attachment file not found: ${path}`);
-    }
-    result.push({ filename: basename(path), path });
+    const real = await assertAttachable(path);
+    result.push({ filename: basename(expandHome(path, homedir())), path: real });
   }
   return result;
 }
