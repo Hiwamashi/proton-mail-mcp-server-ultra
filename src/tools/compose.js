@@ -3,7 +3,8 @@ import { basename } from "node:path";
 import { homedir } from "node:os";
 import { CONFIG, MODES, expandHome } from "../config.js";
 import { assertAttachable } from "../safety.js";
-import { withImapClient, withMailbox, fetchParsed, getSpecialFolder, sendMail } from "../connections.js";
+import { withImapClient, withMailbox, loadMessage, getSpecialFolder, sendMail } from "../connections.js";
+import { messageCache } from "../message-cache.js";
 import { extractBody, addressObjects, formatAddress } from "../content.js";
 import {
   replyRecipients,
@@ -56,7 +57,7 @@ function carryAttachments(parsed, { remove = new Set(), dropInline = false } = {
 }
 
 async function loadOriginal(uid, folder) {
-  const { parsed } = await withMailbox(folder, (client) => fetchParsed(client, uid, folder));
+  const { parsed } = await withMailbox(folder, (client) => loadMessage(client, folder, uid));
   return parsed;
 }
 
@@ -283,7 +284,7 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
       },
     },
     async ({ uid, to, cc, bcc, subject, body, html, addAttachments, removeAttachments }) => {
-      const { parsed, flags } = await withDraftsFolder((client, drafts) => fetchParsed(client, uid, drafts));
+      const { parsed, flags } = await withDraftsFolder((client, drafts) => loadMessage(client, drafts, uid));
       assertIsDraft(flags, uid);
       const newAttachments = await fileAttachments(addAttachments);
 
@@ -314,7 +315,10 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
       const draft = await withImapClient((client) => appendDraft(client, options), WRITE);
       let warning;
       try {
-        await withDraftsFolder((client) => client.messageDelete(`${uid}`, { uid: true }), WRITE);
+        await withDraftsFolder(async (client, drafts) => {
+          await client.messageDelete(`${uid}`, { uid: true });
+          messageCache.invalidate(drafts, uid);
+        }, WRITE);
       } catch (error) {
         warning = `New draft saved, but the old draft UID ${uid} could not be deleted (${error.message}). Delete it with delete_draft.`;
       }
@@ -332,7 +336,7 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
       },
     },
     async ({ uid }) => {
-      const { parsed } = await withDraftsFolder((client, drafts) => fetchParsed(client, uid, drafts));
+      const { parsed } = await withDraftsFolder((client, drafts) => loadMessage(client, drafts, uid));
       const options = {
         from: CONFIG.from,
         to: addressObjects(parsed.to),
@@ -358,7 +362,10 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
       };
       // The mail is out at this point; a failing cleanup must not be reported as a failed send.
       try {
-        await withDraftsFolder((client) => client.messageDelete(`${uid}`, { uid: true }), WRITE);
+        await withDraftsFolder(async (client, drafts) => {
+          await client.messageDelete(`${uid}`, { uid: true });
+          messageCache.invalidate(drafts, uid);
+        }, WRITE);
       } catch (error) {
         result.warning = `Sent, but the draft UID ${uid} could not be removed (${error.message}). Do not send it again – delete it with delete_draft.`;
       }
@@ -377,9 +384,10 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
     },
     async ({ uid }) =>
       withDraftsFolder(async (client, drafts) => {
-        const { parsed, flags } = await fetchParsed(client, uid, drafts);
+        const { parsed, flags } = await loadMessage(client, drafts, uid);
         assertIsDraft(flags, uid);
         await client.messageDelete(`${uid}`, { uid: true });
+        messageCache.invalidate(drafts, uid);
         return text({ success: true, deletedUid: uid, subject: parsed.subject || "" });
       }, WRITE)
   );

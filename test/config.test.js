@@ -39,3 +39,14 @@ test("attachment roots: single * means unrestricted", () => {
   assert.equal(parseAttachmentRoots("*", DIR, HOME), "*");
   assert.equal(parseAttachmentRoots(" * ", DIR, HOME), "*");
 });
+
+test("message cache and large-message settings have their documented defaults", async () => {
+  const { CONFIG } = await import("../src/config.js");
+  for (const key of ["PROTON_MCP_CACHE_MAX_BYTES", "PROTON_MCP_CACHE_TTL_MS", "PROTON_MCP_PARTIAL_FETCH_BYTES", "PROTON_MCP_MAX_INLINE_IMAGE_BYTES"]) {
+    if (process.env[key]) return; // an explicit override makes the default check meaningless
+  }
+  assert.equal(CONFIG.cacheMaxBytes, 67108864);
+  assert.equal(CONFIG.cacheTtlMs, 600000);
+  assert.equal(CONFIG.partialFetchBytes, 5242880);
+  assert.equal(CONFIG.maxInlineImageBytes, 1048576);
+});

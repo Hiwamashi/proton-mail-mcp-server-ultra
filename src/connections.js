@@ -2,6 +2,7 @@ import { ImapFlow } from "imapflow";
 import nodemailer from "nodemailer";
 import { simpleParser } from "mailparser";
 import { CONFIG } from "./config.js";
+import { messageCache } from "./message-cache.js";
 
 // The IMAP connection is reused across tool calls and closed after an idle period.
 // A stale Bridge connection gets exactly one reconnect attempt – but only for operations that
@@ -139,16 +140,38 @@ export async function withMailbox(folder, operation, options) {
 
 export class NotFoundError extends Error {}
 
-// Fetches and parses one message. The client must already have the folder selected.
-// imapflow fetches the source with BODY.PEEK, so reading does not set \Seen.
-export async function fetchParsed(client, uid, folder) {
+function notFound(uid, folder) {
+  return new NotFoundError(`No message with UID ${uid} in folder "${folder}". UIDs are per folder – check the folder name.`);
+}
+
+// Full path: download the whole source and parse it. A future partial-download path (large messages)
+// plugs in at the strategy choice in loadMessage; it must return the same { parsed, flags } shape.
+// skipImageLinks keeps cid: references intact, so re-saved drafts still match their inline parts.
+async function loadFull(client, folder, uid) {
   const message = await client.fetchOne(`${uid}`, { source: true, uid: true, flags: true }, { uid: true });
-  if (!message || !message.source) {
-    throw new NotFoundError(`No message with UID ${uid} in folder "${folder}". UIDs are per folder – check the folder name.`);
-  }
-  // skipImageLinks keeps cid: references intact, so re-saved drafts still match their inline parts.
+  if (!message || !message.source) throw notFound(uid, folder);
   const parsed = await simpleParser(message.source, { skipImageLinks: true });
-  return { parsed, flags: [...(message.flags || [])], source: message.source };
+  return { parsed, flags: [...(message.flags || [])], bytes: message.source.length };
+}
+
+// Loads one message for every tool. The client must already have `folder` selected and locked.
+// The parsed message comes from the cache when possible; flags are always fetched fresh, since they
+// change without the content changing. imapflow fetches the source with BODY.PEEK, so reading does
+// not set \Seen. Returns { parsed, flags } – `parsed` may be shared with the cache, do not mutate it.
+export async function loadMessage(client, folder, uid) {
+  const uidValidity = client.mailbox?.uidValidity;
+  const cached = messageCache.get(folder, uidValidity, uid);
+  if (cached) {
+    const message = await client.fetchOne(`${uid}`, { flags: true, uid: true }, { uid: true });
+    if (!message) {
+      messageCache.invalidate(folder, uid);
+      throw notFound(uid, folder);
+    }
+    return { parsed: cached.parsed, flags: [...(message.flags || [])] };
+  }
+  const { parsed, flags, bytes } = await loadFull(client, folder, uid);
+  messageCache.set(folder, uidValidity, uid, { parsed }, bytes);
+  return { parsed, flags };
 }
 
 let specialFolderCache = null;
@@ -190,6 +213,7 @@ export async function sendMail(mailOptions) {
 }
 
 export async function shutdownConnections() {
+  messageCache.clear();
   clearTimeout(imapIdleTimer);
   const client = imapClient;
   imapClient = null;

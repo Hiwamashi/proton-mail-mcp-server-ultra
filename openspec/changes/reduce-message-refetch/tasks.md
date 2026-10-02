@@ -2,10 +2,10 @@
 
 ## 1. Message loader and cache
 
-- [ ] 1.1 Add the four new settings to `src/config.js`; verify defaults with a unit test
-- [ ] 1.2 Implement `src/message-cache.js` (LRU by bytes, TTL, keys with UIDVALIDITY, invalidate, clear); verify with unit tests for eviction, expiry, oversize entries and disabled cache
-- [ ] 1.3 Introduce one `loadMessage(client, folder, uid)` used by all tools instead of `fetchParsed`, fetching flags separately; verify with a fake IMAP client that `read_email` + three `get_attachment` calls fetch the source once and flags every time
-- [ ] 1.4 Invalidate entries in `move_email`, `delete_email`, `delete_draft`, `update_draft` and `send_draft`; verify with handler tests
+- [x] 1.1 Add the four new settings to `src/config.js`; verify defaults with a unit test
+- [x] 1.2 Implement `src/message-cache.js` (LRU by bytes, TTL, keys with UIDVALIDITY, invalidate, clear); verify with unit tests for eviction, expiry, oversize entries and disabled cache
+- [x] 1.3 Introduce one `loadMessage(client, folder, uid)` used by all tools instead of `fetchParsed`, fetching flags separately; verify with a fake IMAP client that `read_email` + three `get_attachment` calls fetch the source once and flags every time
+- [x] 1.4 Invalidate entries in `move_email`, `delete_email`, `delete_draft`, `update_draft` and `send_draft`; verify with handler tests
 
 ## 2. Partial download
 

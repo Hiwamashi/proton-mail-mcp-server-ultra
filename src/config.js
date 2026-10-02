@@ -103,6 +103,11 @@ function loadConfig() {
     selfAddresses: [...new Set([username, fromAddress, ...aliases].filter(Boolean).map((a) => a.toLowerCase()))],
     imapIdleTimeoutMs: parseInt(get("PROTON_BRIDGE_IDLE_TIMEOUT_MS", "300000"), 10),
     attachmentDir,
+    // Message cache and large-message handling (see message-cache.js). A cache size of 0 disables the cache.
+    cacheMaxBytes: parseInt(get("PROTON_MCP_CACHE_MAX_BYTES", "67108864"), 10),
+    cacheTtlMs: parseInt(get("PROTON_MCP_CACHE_TTL_MS", "600000"), 10),
+    partialFetchBytes: parseInt(get("PROTON_MCP_PARTIAL_FETCH_BYTES", "5242880"), 10),
+    maxInlineImageBytes: parseInt(get("PROTON_MCP_MAX_INLINE_IMAGE_BYTES", "1048576"), 10),
   };
 }
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { withImapClient, withMailbox, fetchParsed, getSpecialFolder } from "../connections.js";
+import { withImapClient, withMailbox, loadMessage, getSpecialFolder } from "../connections.js";
+import { messageCache } from "../message-cache.js";
 import { extractBody, stripQuoted, paginate, formatAddresses, describeAttachments, formatSize, formatDate } from "../content.js";
 import { attachmentToContent } from "../attachments.js";
 import { CONFIG, MODES } from "../config.js";
@@ -199,7 +200,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
       // Decided before the mailbox is touched.
       if (markAsRead && !allowsMarkAsRead(mode)) throw new Error(MARK_AS_READ_REFUSAL);
       return withMailbox(folder, async (client) => {
-        const { parsed, flags } = await fetchParsed(client, uid, folder);
+        const { parsed, flags } = await loadMessage(client, folder, uid);
         let { body, source } = extractBody(parsed, { format, includeLinks });
         let quotedRemoved = false;
         if (strip && format !== "raw_html") ({ text: body, removed: quotedRemoved } = stripQuoted(body));
@@ -229,7 +230,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
       },
     },
     async ({ uid, folder, index, save, offset, maxChars }) => {
-      const { parsed } = await withMailbox(folder, (client) => fetchParsed(client, uid, folder));
+      const { parsed } = await withMailbox(folder, (client) => loadMessage(client, folder, uid));
       const attachment = parsed.attachments?.[index];
       if (!attachment) {
         const count = parsed.attachments?.length || 0;
@@ -254,6 +255,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
       withMailbox(sourceFolder, async (client) => {
         const result = await client.messageMove(`${uid}`, destinationFolder, { uid: true });
         if (!result) throw new Error(`Could not move UID ${uid} from "${sourceFolder}" – does it exist there?`);
+        messageCache.invalidate(sourceFolder, uid);
         const newUid = result.uidMap?.get?.(uid) ?? null;
         return text({ success: true, uid, from: sourceFolder, to: destinationFolder, newUid });
       }, WRITE)
@@ -298,10 +300,12 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
             // Refused before messageDelete so the message stays untouched.
             if (!allowsPermanentDelete(mode)) throw new Error(PERMANENT_DELETE_REFUSAL);
             await client.messageDelete(`${uid}`, { uid: true });
+            messageCache.invalidate(folder, uid);
             return text({ success: true, uid, deletedPermanently: true });
           }
           const result = await client.messageMove(`${uid}`, trash, { uid: true });
           if (!result) throw new Error(`Could not move UID ${uid} from "${folder}" to Trash – does it exist there?`);
+          messageCache.invalidate(folder, uid);
           return text({ success: true, uid, movedTo: trash });
         } finally {
           lock.release();
