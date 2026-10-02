@@ -133,7 +133,7 @@ async function decodedSize(client, uid, node) {
 // Loads one message part by part. `bodyStructure` is imapflow's parsed tree. Returns
 // { parsed, partial: { parts }, bytes } or null when the full path must be used.
 // `parsed.attachments[i]` has the metadata of the full path but `content: null`; `partial.parts[i]` is
-// the IMAP part number to download for it.
+// the IMAP part number to download for it and `partial.encodings[i]` its transfer encoding.
 export async function loadPartially(client, uid, bodyStructure) {
   const plan = planPartialFetch(bodyStructure);
   if (!plan) return null;
@@ -177,14 +177,16 @@ export async function loadPartially(client, uid, bodyStructure) {
     found[i].size = size;
     found[i].content = null;
   }
-  return { parsed, partial: { parts: plan.attachments.map((node) => node.part) }, bytes: skeleton.length };
+  return { parsed, partial: { parts: plan.attachments.map((node) => node.part), encodings: plan.attachments.map((node) => node.encoding || "") }, bytes: skeleton.length };
 }
 
-// Downloads one part, decoded. Used by get_attachment for messages loaded part by part.
-export async function downloadPart(client, uid, part) {
-  const { content } = await client.download(`${uid}`, part, { uid: true, chunkSize: 1024 * 1024 });
-  if (!content) return null;
-  const chunks = [];
-  for await (const chunk of content) chunks.push(chunk);
-  return Buffer.concat(chunks);
+// Downloads one part in a single request and decodes it. imapflow's download() fetches in chunks, which
+// is several times slower for large parts. Attachment parts only ever have an identity or base64
+// encoding here (see planPartialFetch), and mailparser applies no charset conversion to attachments,
+// so this equals the content of the full path.
+export async function downloadPart(client, uid, part, encoding) {
+  const message = await client.fetchOne(`${uid}`, { uid: true, bodyParts: [part] }, { uid: true });
+  const raw = message?.bodyParts?.get(String(part).toLowerCase());
+  if (!raw || message.binaryParts?.size) return null;
+  return encoding === "base64" ? Buffer.from(raw.toString("latin1"), "base64") : raw;
 }

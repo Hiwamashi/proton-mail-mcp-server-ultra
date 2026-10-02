@@ -80,7 +80,6 @@ test("read_email path never downloads attachment parts; get_attachment downloads
   const client = fakeImap(source);
   const loaded = await loadMessage(client, "INBOX", 5, { allowPartial: true });
 
-  assert.deepEqual(client.calls.downloads, []);
   assert.equal(client.calls.source, 0);
   // Attachment bodies are only touched by the size probes (a few bytes), never as whole parts.
   const attachmentParts = new Set(loaded.partial.parts);
@@ -88,8 +87,10 @@ test("read_email path never downloads attachment parts; get_attachment downloads
   assert.ok(bodyRequests.length > 0, "probes are expected for base64 attachments");
   assert.ok(bodyRequests.every((r) => r.partial && r.bytes <= 200), JSON.stringify(bodyRequests));
 
+  const wholeParts = (parts) => client.calls.ranges.filter((r) => !r.partial && parts.has(r.key)).map((r) => r.key);
+  assert.deepEqual(wholeParts(attachmentParts), [], "no whole attachment part before get_attachment");
   await loadAttachment(client, 5, loaded, 2);
-  assert.deepEqual(client.calls.downloads, [loaded.partial.parts[2]]);
+  assert.deepEqual(wholeParts(attachmentParts), [loaded.partial.parts[2]], "one single-request download of exactly that part");
   assert.equal(full.attachments.length, loaded.parsed.attachments.length);
 });
 

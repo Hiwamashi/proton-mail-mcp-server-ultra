@@ -201,7 +201,7 @@ export async function loadMessage(client, folder, uid, { allowPartial = false } 
 export async function loadAttachment(client, uid, loaded, index) {
   const attachment = loaded.parsed.attachments?.[index];
   if (!attachment || !loaded.partial) return attachment;
-  const content = await downloadPart(client, uid, loaded.partial.parts[index]);
+  const content = await downloadPart(client, uid, loaded.partial.parts[index], loaded.partial.encodings[index]);
   if (!content) throw new Error(`Could not download attachment ${index} of UID ${uid}.`);
   return { ...attachment, content, size: content.length };
 }

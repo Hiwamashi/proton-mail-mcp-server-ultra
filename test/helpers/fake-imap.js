@@ -1,5 +1,3 @@
-import { Readable } from "node:stream";
-
 // Test double for an imapflow client that serves one message (UID 5). The BODYSTRUCTURE tree is built
 // here from the raw MIME, with its own small splitter and its own part numbering – deliberately
 // independent of src/partial-fetch.js, so the numbering under test is checked against something else.
@@ -81,7 +79,7 @@ export function describeMime(source) {
 export function fakeImap(source, { uidValidity = 1, flags = ["\\Seen"], editStructure } = {}) {
   const { node, raw } = describeMime(source);
   if (editStructure) editStructure(node);
-  const calls = { source: 0, structure: 0, ranges: [], downloads: [] };
+  const calls = { source: 0, structure: 0, ranges: [] };
   const state = { flags: new Set(flags) };
   const toBuffer = (value) => Buffer.from(value);
 
@@ -118,23 +116,6 @@ export function fakeImap(source, { uidValidity = 1, flags = ["\\Seen"], editStru
       }
       return response;
     },
-    async download(seq, part) {
-      calls.downloads.push(part);
-      const { body } = raw.get(String(part));
-      const encoding = findNode(node, String(part))?.encoding;
-      const decoded = encoding === "base64" ? Buffer.from(body.toString("latin1"), "base64") : body;
-      return { meta: {}, content: Readable.from([decoded.subarray(0, 1000), decoded.subarray(1000)].filter((c) => c.length)) };
-    },
   };
   return client;
-}
-
-function findNode(node, part) {
-  if (node.part === part) return node;
-  for (const child of node.childNodes || []) {
-    if (node.type === "message/rfc822") continue;
-    const found = findNode(child, part);
-    if (found) return found;
-  }
-  return null;
 }
