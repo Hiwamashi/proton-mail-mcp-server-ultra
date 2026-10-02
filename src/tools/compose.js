@@ -15,6 +15,7 @@ import {
   buildRawMessage,
   splitAddresses,
 } from "../compose.js";
+import { FULL_ONLY, DRAFT_MODES, ALL_MODES, draftHint } from "../modes.js";
 import { defineTool, text, summarize, SUMMARY_FETCH } from "./util.js";
 
 const recipientsArg = (what) => z.string().optional().describe(`${what} recipients, comma-separated`);
@@ -131,7 +132,7 @@ async function appendDraft(client, options) {
   return { folder: drafts, uid };
 }
 
-function draftSummary(options, draft) {
+function draftSummary(options, draft, mode) {
   return {
     success: true,
     draftUid: draft.uid,
@@ -142,7 +143,7 @@ function draftSummary(options, draft) {
     subject: options.subject || "",
     inReplyTo: options.inReplyTo || null,
     attachments: (options.attachments || []).map((a) => a.filename),
-    hint: "The draft is visible in Proton Mail under Drafts. Use send_draft to send it or update_draft to change it.",
+    hint: draftHint(mode),
   };
 }
 
@@ -160,11 +161,13 @@ async function withDraftsFolder(operation, options) {
 
 const WRITE = { idempotent: false };
 
-export function registerComposeTools(server) {
-  defineTool(
-    server,
+export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
+  const define = (name, config, handler) => defineTool(server, name, config, handler, mode);
+
+  define(
     "send_email",
     {
+      modes: FULL_ONLY,
       description: "Compose and send a new email immediately. To let the user review it first, use create_draft instead.",
       inputSchema: {
         to: z.string().describe("Recipients, comma-separated"),
@@ -183,10 +186,10 @@ export function registerComposeTools(server) {
     }
   );
 
-  defineTool(
-    server,
+  define(
     "reply_to_email",
     {
+      modes: FULL_ONLY,
       description:
         "Reply to an email and send immediately. Sets threading headers, honors Reply-To and quotes the original. To let the user review it first, use create_draft with replyToUid instead.",
       inputSchema: {
@@ -214,10 +217,10 @@ export function registerComposeTools(server) {
     }
   );
 
-  defineTool(
-    server,
+  define(
     "create_draft",
     {
+      modes: DRAFT_MODES,
       description:
         "Save an email as a draft in Proton Mail's Drafts folder without sending it. For a reply draft pass replyToUid (and replyFolder): recipients, subject, threading and quote are filled in automatically; explicit to/cc/subject override them.",
       inputSchema: {
@@ -238,14 +241,14 @@ export function registerComposeTools(server) {
       const original = replyToUid !== undefined ? await loadOriginal(replyToUid, replyFolder) : null;
       const options = await composeOptions({ ...rest, original });
       const draft = await withImapClient((client) => appendDraft(client, options), WRITE);
-      return text(draftSummary(options, draft));
+      return text(draftSummary(options, draft, mode));
     }
   );
 
-  defineTool(
-    server,
+  define(
     "list_drafts",
     {
+      modes: ALL_MODES,
       description: "List saved drafts, newest first.",
       inputSchema: {
         limit: z.number().int().min(1).max(100).default(20).describe("Number of drafts (default 20)"),
@@ -262,10 +265,10 @@ export function registerComposeTools(server) {
       })
   );
 
-  defineTool(
-    server,
+  define(
     "update_draft",
     {
+      modes: DRAFT_MODES,
       description:
         "Change a saved draft. Only the given fields are replaced; recipients, subject, threading headers and attachments that are not given stay as they are. A new body replaces the whole text including any quote, and the HTML version is regenerated from it as plain formatting unless html is given. The draft gets a new UID, which is returned. Read the draft with read_email (folder Drafts) first if you need its current text.",
       inputSchema: {
@@ -315,14 +318,14 @@ export function registerComposeTools(server) {
       } catch (error) {
         warning = `New draft saved, but the old draft UID ${uid} could not be deleted (${error.message}). Delete it with delete_draft.`;
       }
-      return text({ ...draftSummary(options, draft), replacedUid: uid, ...(warning ? { warning } : {}) });
+      return text({ ...draftSummary(options, draft, mode), replacedUid: uid, ...(warning ? { warning } : {}) });
     }
   );
 
-  defineTool(
-    server,
+  define(
     "send_draft",
     {
+      modes: FULL_ONLY,
       description: "Send a saved draft and remove it from Drafts. Proton stores the sent message in Sent.",
       inputSchema: {
         uid: z.number().int().describe("UID of the draft in the Drafts folder"),
@@ -363,10 +366,10 @@ export function registerComposeTools(server) {
     }
   );
 
-  defineTool(
-    server,
+  define(
     "delete_draft",
     {
+      modes: DRAFT_MODES,
       description: "Delete a saved draft permanently.",
       inputSchema: {
         uid: z.number().int().describe("UID of the draft in the Drafts folder"),

@@ -7,10 +7,10 @@
 
 ## 2. Mode enforcement
 
-- [ ] 2.1 Extend `defineTool` with a `modes` field and assign modes to all 15 tools; verify with a test that lists registered tools per mode against the spec table
-- [ ] 2.2 Refuse permanent deletion from Trash outside `full` mode in `delete_email`; verify with a handler test using a fake IMAP client
-- [ ] 2.3 Refuse `markAsRead` in `read-only` mode; verify with a handler test
-- [ ] 2.4 Make tool descriptions and the draft hint mode-dependent (`create_draft`, `update_draft`, `reply_to_email` references); verify that no description in `drafts` mode mentions an unregistered tool
+- [x] 2.1 Extend `defineTool` with a `modes` field and assign modes to all 15 tools; verify with a test that lists registered tools per mode against the spec table
+- [x] 2.2 Refuse permanent deletion from Trash outside `full` mode in `delete_email`; verify with a handler test using a fake IMAP client
+- [x] 2.3 Refuse `markAsRead` in `read-only` mode; verify with a handler test
+- [x] 2.4 Make tool descriptions and the draft hint mode-dependent (`create_draft`, `update_draft`, `reply_to_email` references); verify that no description in `drafts` mode mentions an unregistered tool
 
 ## 3. Attachment path check
 

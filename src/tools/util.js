@@ -1,3 +1,5 @@
+import { CONFIG } from "../config.js";
+import { toolAvailable } from "../modes.js";
 import { NotFoundError } from "../connections.js";
 import { formatAddress } from "../content.js";
 
@@ -11,7 +13,9 @@ function errorResult(error) {
 }
 
 // Registers a tool whose handler errors are returned to the model instead of crashing the call.
-export function defineTool(server, name, config, handler) {
+// `config.modes` lists the operating modes the tool exists in; in any other mode it is not registered.
+export function defineTool(server, name, { modes, ...config }, handler, mode = CONFIG.mode) {
+  if (!toolAvailable(modes, mode)) return false;
   server.registerTool(name, config, async (args) => {
     try {
       return await handler(args);
@@ -19,6 +23,7 @@ export function defineTool(server, name, config, handler) {
       return errorResult(error);
     }
   });
+  return true;
 }
 
 // imapflow bodyStructure → true if any part is a real (non-inline) attachment.

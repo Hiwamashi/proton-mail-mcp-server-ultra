@@ -2,6 +2,18 @@ import { z } from "zod";
 import { withImapClient, withMailbox, fetchParsed, getSpecialFolder } from "../connections.js";
 import { extractBody, stripQuoted, paginate, formatAddresses, describeAttachments, formatSize, formatDate } from "../content.js";
 import { attachmentToContent } from "../attachments.js";
+import { CONFIG } from "../config.js";
+import {
+  ALL_MODES,
+  DRAFT_MODES,
+  allowsMarkAsRead,
+  allowsPermanentDelete,
+  deleteEmailDescription,
+  markAsReadDescription,
+  readEmailDescription,
+  MARK_AS_READ_REFUSAL,
+  PERMANENT_DELETE_REFUSAL,
+} from "../modes.js";
 import { defineTool, text, summarize, SUMMARY_FETCH } from "./util.js";
 
 const folderArg = (fallback = "INBOX") =>
@@ -51,11 +63,13 @@ function renderEmail({ uid, folder, parsed, flags, body, source, page, quotedRem
   return lines.join("\n");
 }
 
-export function registerMailboxTools(server) {
-  defineTool(
-    server,
+export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
+  const define = (name, config, handler) => defineTool(server, name, config, handler, mode);
+
+  define(
     "list_folders",
     {
+      modes: ALL_MODES,
       description: "List all mailbox folders with their special use (\\Inbox, \\Sent, \\Drafts, \\Trash, ...) and message counts.",
       inputSchema: {},
     },
@@ -73,10 +87,10 @@ export function registerMailboxTools(server) {
       })
   );
 
-  defineTool(
-    server,
+  define(
     "list_emails",
     {
+      modes: ALL_MODES,
       description:
         "List the newest emails in a folder, newest first. Returns UID, date, from, to, subject, read/flag state and whether there are attachments. Use offset to page further back.",
       inputSchema: {
@@ -99,10 +113,10 @@ export function registerMailboxTools(server) {
       })
   );
 
-  defineTool(
-    server,
+  define(
     "search_emails",
     {
+      modes: ALL_MODES,
       description:
         "Search a folder; results are sorted newest first. All criteria are combined with AND. Tip: search folder \"All Mail\" to search everything at once.",
       inputSchema: {
@@ -163,12 +177,11 @@ export function registerMailboxTools(server) {
       })
   );
 
-  defineTool(
-    server,
+  define(
     "read_email",
     {
-      description:
-        "Read an email: headers, readable body and a numbered attachment list. HTML-only emails are converted to text automatically. Long bodies are paged – continue with the given offset. Does not mark the email as read unless markAsRead is set.",
+      modes: ALL_MODES,
+      description: readEmailDescription(mode),
       inputSchema: {
         uid: z.number().int().describe("UID of the email"),
         folder: folderArg(),
@@ -180,11 +193,13 @@ export function registerMailboxTools(server) {
         stripQuoted: z.boolean().default(false).describe("Remove the quoted reply history below the new content"),
         offset: z.number().int().min(0).default(0).describe("Start position in the body (for paging long emails)"),
         maxChars: z.number().int().min(500).max(100000).default(20000).describe("Max body characters to return (default 20000)"),
-        markAsRead: z.boolean().default(false).describe("Also mark the email as read"),
+        markAsRead: z.boolean().default(false).describe(markAsReadDescription(mode)),
       },
     },
-    async ({ uid, folder, format, includeLinks, stripQuoted: strip, offset, maxChars, markAsRead }) =>
-      withMailbox(folder, async (client) => {
+    async ({ uid, folder, format, includeLinks, stripQuoted: strip, offset, maxChars, markAsRead }) => {
+      // Decided before the mailbox is touched.
+      if (markAsRead && !allowsMarkAsRead(mode)) throw new Error(MARK_AS_READ_REFUSAL);
+      return withMailbox(folder, async (client) => {
         const { parsed, flags } = await fetchParsed(client, uid, folder);
         let { body, source } = extractBody(parsed, { format, includeLinks });
         let quotedRemoved = false;
@@ -195,13 +210,14 @@ export function registerMailboxTools(server) {
           flags.push("\\Seen");
         }
         return text(renderEmail({ uid, folder, parsed, flags, body: page.chunk, source, page, quotedRemoved }));
-      })
+      });
+    }
   );
 
-  defineTool(
-    server,
+  define(
     "get_attachment",
     {
+      modes: ALL_MODES,
       description:
         "Open an attachment of an email by its index from read_email. PDFs and text files are returned as text, images are shown directly, attached emails are rendered. Other files (Office documents, archives, ...) are saved to the local attachment folder and the path is returned.",
       inputSchema: {
@@ -224,10 +240,10 @@ export function registerMailboxTools(server) {
     }
   );
 
-  defineTool(
-    server,
+  define(
     "move_email",
     {
+      modes: DRAFT_MODES,
       description: "Move an email to another folder (e.g. Archive, Spam, Folders/MyFolder).",
       inputSchema: {
         uid: z.number().int().describe("UID of the email"),
@@ -244,10 +260,10 @@ export function registerMailboxTools(server) {
       }, WRITE)
   );
 
-  defineTool(
-    server,
+  define(
     "mark_email",
     {
+      modes: DRAFT_MODES,
       description: "Mark an email as read/unread or flagged/unflagged (flagged = starred in Proton).",
       inputSchema: {
         uid: z.number().int().describe("UID of the email"),
@@ -264,11 +280,11 @@ export function registerMailboxTools(server) {
       })
   );
 
-  defineTool(
-    server,
+  define(
     "delete_email",
     {
-      description: "Delete an email: moves it to Trash. If it is already in Trash, it is deleted permanently.",
+      modes: DRAFT_MODES,
+      description: deleteEmailDescription(mode),
       inputSchema: {
         uid: z.number().int().describe("UID of the email"),
         folder: folderArg(),
@@ -280,6 +296,8 @@ export function registerMailboxTools(server) {
         const lock = await client.getMailboxLock(folder);
         try {
           if (folder.toLowerCase() === trash.toLowerCase()) {
+            // Refused before messageDelete so the message stays untouched.
+            if (!allowsPermanentDelete(mode)) throw new Error(PERMANENT_DELETE_REFUSAL);
             await client.messageDelete(`${uid}`, { uid: true });
             return text({ success: true, uid, deletedPermanently: true });
           }
