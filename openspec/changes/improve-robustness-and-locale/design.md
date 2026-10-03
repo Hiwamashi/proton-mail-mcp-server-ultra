@@ -31,7 +31,11 @@ Move `specialFolderCache` onto the client object (`WeakMap<ImapFlow, Map>`), so 
 ### CI
 `.github/workflows/ci.yml`: matrix Node 20 and 22, `npm ci`, `npm test`, `npm run build`. No secrets, no Bridge.
 
+### nodemailer upgrade
+Planned on 2026-10-03 after `add-reading-tools`: `npm audit` flags `nodemailer <= 10.0.5` (high; among others SMTP command injection via CRLF, header injection in List-* comments, addressparser DoS). The fix is only available in 10.x, i.e. four major versions above the pinned ^6.10.1; `mailparser` already pulls 10.0.13 as its own dependency. We use two surfaces: `createTransport` (SMTP to the Bridge with STARTTLS, self-signed cert) and `nodemailer/lib/mail-composer` (raw MIME for drafts). Approach: read the 7.x–10.x changelogs for these two surfaces first, upgrade, then compare the MIME of the existing compose tests and run `scripts/smoke.mjs --drafts` against the Bridge. Done here because the CI from this change catches regressions and the handler tests cover send and draft paths.
+
 ## Risks / Trade-offs
 
 - [Fake drifts from imapflow behavior] → Keep the fake minimal, assert only on our own logic (retry counts, call order), and keep `scripts/smoke.mjs` as the real-Bridge check.
 - [Locale attribution not recognized by other clients' quote detection] → Formats follow the common Gmail/Apple Mail patterns per language.
+- [nodemailer 10 changes MIME output or the internal `lib/mail-composer` path] → Changelog review first; compose tests compare headers and structure; smoke test with drafts against the Bridge before the change is done.

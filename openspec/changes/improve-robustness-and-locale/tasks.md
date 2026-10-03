@@ -20,7 +20,12 @@
 
 - [ ] 4.1 Inject the package version in `build.mjs` and use it in `server.js`; verify via `scripts/smoke.mjs` that the initialize result reports the `package.json` version
 
-## 5. Documentation
+## 5. Dependency security
 
-- [ ] 5.1 Update `feature-documentation/compose/reply-logic.md`, `configuration.md`, `connections/imap-connection-reuse.md`, `reading/list-emails.md` (DE+EN) and add `feature-documentation/testing.md` (DE+EN) describing the fake client and CI
-- [ ] 5.2 Update README (DE+EN) settings table and PROGRESS.md; verify `npm test` and `npm run build` pass
+- [ ] 5.1 Review the nodemailer 7.x–10.x changelogs for `createTransport` (STARTTLS, `tls.rejectUnauthorized`) and `lib/mail-composer`; record breaking changes that affect us in design.md
+- [ ] 5.2 Upgrade `nodemailer` to ^10 and adapt `src/connections.js` / `src/compose.js` if needed; verify `npm audit` shows no high-severity advisory, `npm test` and `npm run build` pass, and `scripts/smoke.mjs --drafts` creates, updates and deletes a draft against the Bridge
+
+## 6. Documentation
+
+- [ ] 6.1 Update `feature-documentation/compose/reply-logic.md`, `configuration.md`, `connections/imap-connection-reuse.md`, `reading/list-emails.md` (DE+EN) and add `feature-documentation/testing.md` (DE+EN) describing the fake client and CI
+- [ ] 6.2 Update README (DE+EN) settings table and PROGRESS.md (including the nodemailer upgrade); verify `npm test` and `npm run build` pass
