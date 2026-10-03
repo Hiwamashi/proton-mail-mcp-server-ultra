@@ -19,7 +19,8 @@ Common mailbox chores are clumsy or impossible for agents today: forwarding a me
 ### Modified Capabilities
 - `mail-sending`: ADDED requirement for forwarding.
 - `drafts`: ADDED requirement for forward drafts.
-- `mailbox-management`: ADDED requirement for bulk operations.
+- `mailbox-management`: ADDED requirement for bulk operations; MODIFIED "Move email" (not-found message) and "Mark email" (unknown UID now fails instead of reporting success).
+- `agent-safety`: MODIFIED "Operating modes" – `label_email` and `create_folder` join `drafts`, `forward_email` joins `full`.
 
 ## Impact
 

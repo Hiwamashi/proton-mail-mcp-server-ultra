@@ -30,6 +30,24 @@ Single-UID operations live in `src/tools/mailbox.js`; reply composition in `src/
 - Spike first: verify both behaviors against the running Bridge with a test message before implementing; if Bridge semantics differ, stop and revise the spec.
 - Alternative: IMAP keywords – rejected, Bridge does not map labels to keywords.
 
+### Spike result (2026-10-03, Proton Bridge, approved throwaway message and label)
+A message `[MCP-Spike] Testnachricht` was appended to INBOX and a label `Labels/MCP-Spike-Test` created (`mailboxCreate` works, the label is listed right away). Counts by Message-ID per folder:
+
+| Step | INBOX | Labels/MCP-Spike-Test |
+|---|---|---|
+| after APPEND | 1 | 0 |
+| after `UID COPY` INBOX → label | 1 | 1 |
+| after a second `UID COPY` (label already set) | 1 | 1 |
+| after `STORE \Deleted` + `UID EXPUNGE` in the label folder | 1 | 0 |
+
+- COPY into a label folder applies the label without removing the message from INBOX; a second COPY changes nothing (idempotent).
+- EXPUNGE in the label folder removes only the label; the message stays in INBOX with its flags (`\Seen`).
+- The message is found in the label folder by `HEADER Message-ID` right after the COPY, so the remove path works as designed.
+- No duplicate: after cleanup exactly one copy was left in "All Mail".
+- "All Mail" lags behind: the appended message only appeared there after a few seconds, and after Move to Trash + EXPUNGE in Trash it was still listed in "All Mail" for some seconds before it disappeared (checked again after 30 s: gone). Label operations therefore never rely on "All Mail".
+- Cleanup: test message moved to Trash and expunged there, label removed with `mailboxDelete`.
+→ Design confirmed; no spec change needed.
+
 ### create_folder
 `client.mailboxCreate("Folders/<name>" | "Labels/<name>")`; existence checked via `list()` first. Clears the special-use/folder cache.
 

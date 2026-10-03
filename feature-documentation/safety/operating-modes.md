@@ -45,11 +45,14 @@ Nicht verfügbare Tools werden **gar nicht registriert**. Der Agent sieht sie ni
 | `create_draft` | – | ja | ja |
 | `update_draft` | – | ja | ja |
 | `delete_draft` | – | ja | ja |
+| `label_email` | – | ja | ja |
+| `create_folder` | – | ja | ja |
 | `send_email` | – | – | ja |
 | `reply_to_email` | – | – | ja |
 | `send_draft` | – | – | ja |
+| `forward_email` | – | – | ja |
 
-Anzahl: 7 Tools in `read-only`, 13 in `drafts`, 16 in `full`.
+Anzahl: 7 Tools in `read-only`, 15 in `drafts`, 19 in `full`.
 
 Zwei Verhaltensunterschiede innerhalb eines Tools:
 
@@ -97,6 +100,9 @@ Jedes Tool trägt `title` und die MCP-Annotationen `readOnlyHint`, `destructiveH
 | `send_email` | Send email | nein | nein | nein | ja |
 | `reply_to_email` | Reply to email | nein | nein | nein | ja |
 | `send_draft` | Send draft | nein | nein | nein | ja |
+| `forward_email` | Forward email | nein | nein | nein | ja |
+| `label_email` | Label email | nein | nein | ja | nein |
+| `create_folder` | Create folder or label | nein | nein | nein | nein |
 
 `update_draft` gilt als destruktiv, weil es den alten Entwurf löscht und ersetzt. Ein Test stellt sicher, dass jedes registrierte Tool `title`, `readOnlyHint` und `openWorldHint` setzt.
 
@@ -167,11 +173,14 @@ Unavailable tools are **not registered at all**. The agent does not see them ins
 | `create_draft` | – | yes | yes |
 | `update_draft` | – | yes | yes |
 | `delete_draft` | – | yes | yes |
+| `label_email` | – | yes | yes |
+| `create_folder` | – | yes | yes |
 | `send_email` | – | – | yes |
 | `reply_to_email` | – | – | yes |
 | `send_draft` | – | – | yes |
+| `forward_email` | – | – | yes |
 
-Count: 7 tools in `read-only`, 13 in `drafts`, 16 in `full`.
+Count: 7 tools in `read-only`, 15 in `drafts`, 19 in `full`.
 
 Two behavior differences inside a tool:
 
@@ -219,6 +228,9 @@ Every tool carries `title` and the MCP annotations `readOnlyHint`, `destructiveH
 | `send_email` | Send email | no | no | no | yes |
 | `reply_to_email` | Reply to email | no | no | no | yes |
 | `send_draft` | Send draft | no | no | no | yes |
+| `forward_email` | Forward email | no | no | no | yes |
+| `label_email` | Label email | no | no | yes | no |
+| `create_folder` | Create folder or label | no | no | no | no |
 
 `update_draft` counts as destructive because it deletes and replaces the old draft. A test ensures every registered tool sets `title`, `readOnlyHint` and `openWorldHint`.
 

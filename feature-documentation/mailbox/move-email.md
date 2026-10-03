@@ -16,7 +16,8 @@ Verschiebt eine Mail von einem Ordner in einen anderen (z. B. von INBOX in Archi
 
 | Parameter | Typ | Beschreibung |
 |---|---|---|
-| `uid` | number | UID der Mail |
+| `uid` | number | UID der Mail (genau eins von `uid` und `uids`) |
+| `uids` | number[] | 1 bis 500 UIDs desselben Ordners, siehe `bulk-operations.md` |
 | `sourceFolder` | string | Quell-Ordner (Standard: `"INBOX"`) |
 | `destinationFolder` | string | Ziel-Ordner (wie von `list_folders` geliefert) |
 
@@ -53,10 +54,12 @@ Pfade müssen exakt von `list_folders` stammen, z. B. `"Archive"`, `"Folders/MyF
 Falls die Mail im Quell-Ordner nicht existiert:
 
 ```
-Error: Could not move UID 999 from "INBOX" – does it exist there?
+No message with UID 999 in folder "INBOX". UIDs are per folder – check the folder name.
 ```
 
-Falls der Ziel-Ordner nicht existiert: IMAP-Fehler von der Bridge.
+Falls der Ziel-Ordner nicht existiert: IMAP-Fehler von der Bridge bzw. `Could not move UID … from "…" to "…".`
+
+Mit `uids` enthält die Rückgabe `processed`, `notFound` und `uidMap` statt `uid`/`newUid` (siehe `bulk-operations.md`).
 
 Das Tool nutzt `{ idempotent: false }`, daher wird ein Fehler nicht automatisch wiederholt.
 
@@ -76,7 +79,8 @@ Moves a message from one folder to another (e.g. from INBOX to Archive or Spam).
 
 | Parameter | Type | Description |
 |---|---|---|
-| `uid` | number | UID of the message |
+| `uid` | number | UID of the message (exactly one of `uid` and `uids`) |
+| `uids` | number[] | 1 to 500 UIDs of the same folder, see `bulk-operations.md` |
 | `sourceFolder` | string | Source folder (default: `"INBOX"`) |
 | `destinationFolder` | string | Destination folder (as returned by `list_folders`) |
 
@@ -113,9 +117,11 @@ Paths must match exactly from `list_folders`, e.g. `"Archive"`, `"Folders/MyFold
 If the message does not exist in the source folder:
 
 ```
-Error: Could not move UID 999 from "INBOX" – does it exist there?
+No message with UID 999 in folder "INBOX". UIDs are per folder – check the folder name.
 ```
 
-If the destination folder does not exist: IMAP error from the Bridge.
+If the destination folder does not exist: IMAP error from the Bridge or `Could not move UID … from "…" to "…".`
+
+With `uids` the result contains `processed`, `notFound` and `uidMap` instead of `uid`/`newUid` (see `bulk-operations.md`).
 
 The tool uses `{ idempotent: false }`, so errors are not automatically retried.

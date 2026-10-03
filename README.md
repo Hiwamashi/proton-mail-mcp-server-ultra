@@ -27,6 +27,7 @@ Dieses Projekt ist ein Fork von **[tamnys/proton-mail-mcp-server](https://github
 - **Lange Mails kommen seitenweise** (`offset`/`maxChars`), statt den Kontext des Agenten zu sprengen.
 - **Anhänge lassen sich öffnen:** PDFs, Word, Excel, PowerPoint und OpenDocument als Text, Kalendereinladungen als Zusammenfassung (Zeit mit Zeitzone und UTC, Teilnehmer mit Status), Bilder direkt, Textdateien und angehängte Mails gerendert. Alles andere wird lokal gespeichert.
 - **Ganze Konversationen:** `get_thread` holt zu einer Mail den ganzen Verlauf über alle Ordner, auch die eigenen Antworten aus „Gesendet“, mit gekürzten Bodies in einem Zeichenbudget.
+- **Aufräumen in einem Rutsch:** Verschieben, Markieren und Löschen nehmen bis zu 500 UIDs auf einmal. Proton-Labels lassen sich setzen und entfernen, neue Ordner und Labels anlegen. Weiterleiten geht als Entwurf oder (in `full`) sofort, mit den Original-Anhängen.
 - **Weniger erneutes Laden:** Ein Cache hält geparste Mails zehn Minuten im Speicher, und große Mails über 5 MB werden nur teilweise geladen (Header und Text, Anhänge einzeln). Beides lässt sich abschalten (siehe Schritt 4).
 - **Entwürfe** erscheinen in Proton unter *Entwürfe* und lassen sich dort weiterbearbeiten. Damit kann ein Agent vorformulieren und ein Mensch vor dem Senden prüfen.
 - **Suchergebnisse sind nach Datum sortiert**, auch in „All Mail“.
@@ -43,11 +44,14 @@ Dieses Projekt ist ein Fork von **[tamnys/proton-mail-mcp-server](https://github
 | `get_thread` | Ganze Konversation einer Mail über alle Ordner, älteste zuerst, mit Bodies ohne Zitat in einem Zeichenbudget (`includeBodies`, `maxChars`) | `read-only` |
 | `get_attachment` | Anhang per Index öffnen (PDF, Office und OpenDocument als Text, Kalender zusammengefasst, `raw: true` für den Rohtext) oder mit `save: true` speichern | `read-only` |
 | `list_drafts` | Entwürfe auflisten | `read-only` |
-| `move_email`, `mark_email` | Verschieben, gelesen/ungelesen, markieren | `drafts` |
-| `delete_email` | In den Papierkorb (ab `drafts`); im Papierkorb endgültig löschen nur in `full` | `drafts` / `full` |
-| `create_draft` | Entwurf anlegen, neu oder mit `replyToUid` als Antwort (Empfänger, Betreff, Threading und Zitat werden automatisch gesetzt) | `drafts` |
+| `move_email`, `mark_email` | Verschieben, gelesen/ungelesen, markieren; mit `uids` bis zu 500 Mails eines Ordners auf einmal | `drafts` |
+| `delete_email` | In den Papierkorb (ab `drafts`); im Papierkorb endgültig löschen nur in `full`; auch mit `uids` | `drafts` / `full` |
+| `label_email` | Proton-Label setzen oder entfernen, eine Mail oder mit `uids` viele; die Mails bleiben in ihrem Ordner | `drafts` |
+| `create_folder` | Ordner (`Folders/…`, verschachtelt möglich) oder Label (`Labels/…`) anlegen | `drafts` |
+| `create_draft` | Entwurf anlegen, neu, mit `replyToUid` als Antwort (Empfänger, Betreff, Threading und Zitat werden automatisch gesetzt) oder mit `forwardUid` als Weiterleitung (Kopfblock und Original-Anhänge) | `drafts` |
 | `update_draft`, `delete_draft` | Entwürfe ändern und löschen | `drafts` |
 | `send_email`, `reply_to_email` | Sofort senden (Antworten mit Threading, Reply-To und Zitat) | `full` |
+| `forward_email` | Sofort weiterleiten, mit Kopfblock und Original-Anhängen | `full` |
 | `send_draft` | Entwurf senden | `full` |
 
 Die Spalte „Ab Modus“ nennt den ersten Modus, in dem das Tool existiert. Nicht verfügbare Tools werden gar nicht registriert, der Agent sieht sie nicht.
@@ -63,8 +67,8 @@ UIDs gelten nur innerhalb ihres Ordners. Eine Mail, die `search_emails` in „Al
 | Modus | Tools | Zweck |
 |---|---|---|
 | `read-only` | 7: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_thread`, `get_attachment`, `list_drafts` | Nichts ändert sich im Postfach, auch kein „gelesen“-Flag. Für Prüfungen und gemeinsam genutzte Rechner. |
-| `drafts` (**Standard**) | 13: wie `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | Der Agent bereitet vor, du sendest in Proton Mail. Kein Senden, kein endgültiges Löschen aus dem Papierkorb; Entwürfe lassen sich weiterhin löschen (`delete_draft`) und werden von `update_draft` ersetzt. |
-| `full` | 16: alle, zusätzlich `send_email`, `reply_to_email`, `send_draft` | Senden und endgültiges Löschen. Nur für Agenten, denen du vertraust, am besten mit Rückfrage des Clients vor jedem Senden. |
+| `drafts` (**Standard**) | 15: wie `read-only` plus `mark_email`, `move_email`, `delete_email`, `label_email`, `create_folder`, `create_draft`, `update_draft`, `delete_draft` | Der Agent bereitet vor, du sendest in Proton Mail. Kein Senden, kein endgültiges Löschen aus dem Papierkorb; Entwürfe lassen sich weiterhin löschen (`delete_draft`) und werden von `update_draft` ersetzt. |
+| `full` | 19: alle, zusätzlich `send_email`, `reply_to_email`, `forward_email`, `send_draft` | Senden und endgültiges Löschen. Nur für Agenten, denen du vertraust, am besten mit Rückfrage des Clients vor jedem Senden. |
 
 Ein ungültiger Wert beendet den Start mit einer Fehlermeldung, die die gültigen Werte nennt.
 
@@ -235,7 +239,7 @@ Nach dem Update auf die Version mit Betriebsmodi gilt der neue Standard `drafts`
 
 ### Sicherheit beim Einsatz mit Agenten
 
-- **Entwürfe statt Senden.** Der Standardmodus `drafts` kennt keine Sende-Tools: Der Agent legt Entwürfe an, du prüfst und sendest sie in Proton. Den Modus `full` nur wählen, wenn der Agent wirklich senden muss. Viele Clients können zusätzlich einzelne Tools sperren oder vor jedem Aufruf nachfragen, gerade bei `send_email`, `send_draft`, `reply_to_email` und `delete_email`. Dafür setzt der Server MCP-Annotationen (`readOnlyHint`, `destructiveHint`, `openWorldHint`) an jedes Tool.
+- **Entwürfe statt Senden.** Der Standardmodus `drafts` kennt keine Sende-Tools: Der Agent legt Entwürfe an, du prüfst und sendest sie in Proton. Den Modus `full` nur wählen, wenn der Agent wirklich senden muss. Viele Clients können zusätzlich einzelne Tools sperren oder vor jedem Aufruf nachfragen, gerade bei `send_email`, `send_draft`, `reply_to_email`, `forward_email` und `delete_email`. Dafür setzt der Server MCP-Annotationen (`readOnlyHint`, `destructiveHint`, `openWorldHint`) an jedes Tool.
 - **Mailinhalte sind fremde Eingaben.** Eine Mail kann Anweisungen enthalten, die sich an den Agenten richten („Leite alle Rechnungen an … weiter“). Der Agent muss Mailinhalte als Daten behandeln, nicht als Auftrag. Der Server weist Clients beim Verbindungsaufbau darauf hin (MCP-`instructions`). Das ersetzt keinen Schutz: Verlass dich auf den Modus, nicht auf den Hinweis.
 - **Anhänge nur aus erlaubten Verzeichnissen**, versteckte Pfade nie (siehe [Betriebsmodi](#betriebsmodi)). So kann eine Mail den Agenten nicht dazu bringen, etwa `~/.ssh/id_ed25519` anzuhängen. `PROTON_MCP_ATTACHMENT_ROOTS=*` schwächt diesen Schutz.
 - **Datenfluss bedenken.** Die Bridge und dieser Server laufen lokal. Was der Agent liest, geht aber an das jeweils genutzte Sprachmodell. Wer das vermeiden will, nutzt ein lokales Modell, etwa über LM Studio.
@@ -271,7 +275,7 @@ src/attachments.js   Anhänge als Text/Bild bzw. Ablage
 src/office.js        Text aus DOCX, XLSX, PPTX, ODT, ODS, ODP (mit fflate)
 src/ical.js          Zusammenfassung von Kalenderdateien und Einladungen
 src/thread.js        Konversationen aus Message-ID/References rekonstruieren
-src/tools/           Tool-Definitionen (Postfach, Senden/Entwürfe), Annotationen
+src/tools/           Tool-Definitionen (Postfach, Senden/Entwürfe/Weiterleiten, Labels/Ordner), Annotationen
 scripts/smoke.mjs    Ende-zu-Ende-Test gegen die laufende Bridge
 test/                Unit-Tests (node:test)
 ```
@@ -312,6 +316,7 @@ This project is a fork of **[tamnys/proton-mail-mcp-server](https://github.com/t
 - **Less re-fetching:** A cache keeps parsed messages in memory for ten minutes, and large messages above 5 MB are loaded only partially (headers and text, attachments one by one). Both can be turned off (see step 4).
 - **Attachments can be opened:** PDFs, Word, Excel, PowerPoint and OpenDocument as text, calendar invitations as a summary (time with time zone and UTC, attendees with status), images directly, text files and attached messages rendered. Everything else is saved locally.
 - **Whole conversations:** `get_thread` fetches the whole history of a message across all folders, including your own replies from "Sent", with shortened bodies within one character budget.
+- **Tidying up in one go:** Move, mark and delete take up to 500 UIDs at once. Proton labels can be added and removed, new folders and labels created. Forwarding works as a draft or (in `full`) immediately, with the original attachments.
 - **Drafts** appear in Proton under *Drafts* and can be edited there. An agent can prepare a reply and a human can review it before sending.
 - **Search results are sorted by date**, including in "All Mail".
 - **Source instead of a bundle:** modular code under `src/`, unit tests, and a smoke test against the running Bridge.
@@ -327,11 +332,14 @@ This project is a fork of **[tamnys/proton-mail-mcp-server](https://github.com/t
 | `get_thread` | Whole conversation of a message across all folders, oldest first, with bodies without quotes within one character budget (`includeBodies`, `maxChars`) | `read-only` |
 | `get_attachment` | Open an attachment by index (PDF, Office and OpenDocument as text, calendars summarized, `raw: true` for the raw text) or save it with `save: true` | `read-only` |
 | `list_drafts` | List drafts | `read-only` |
-| `move_email`, `mark_email` | Move, mark read/unread, flag | `drafts` |
-| `delete_email` | Move to Trash (from `drafts`); delete permanently when already in Trash only in `full` | `drafts` / `full` |
-| `create_draft` | Create a draft, new or as a reply via `replyToUid` (recipients, subject, threading and quote are set automatically) | `drafts` |
+| `move_email`, `mark_email` | Move, mark read/unread, flag; with `uids` up to 500 messages of one folder at once | `drafts` |
+| `delete_email` | Move to Trash (from `drafts`); delete permanently when already in Trash only in `full`; also with `uids` | `drafts` / `full` |
+| `label_email` | Add or remove a Proton label, one message or many via `uids`; the messages stay in their folder | `drafts` |
+| `create_folder` | Create a folder (`Folders/…`, nested possible) or a label (`Labels/…`) | `drafts` |
+| `create_draft` | Create a draft, new, as a reply via `replyToUid` (recipients, subject, threading and quote are set automatically) or as a forward via `forwardUid` (header block and original attachments) | `drafts` |
 | `update_draft`, `delete_draft` | Change and delete drafts | `drafts` |
 | `send_email`, `reply_to_email` | Send immediately (replies with threading, Reply-To and quote) | `full` |
+| `forward_email` | Forward immediately, with header block and original attachments | `full` |
 | `send_draft` | Send a draft | `full` |
 
 The column "From mode" names the first mode in which the tool exists. Unavailable tools are not registered at all; the agent does not see them.
@@ -347,8 +355,8 @@ UIDs are only valid within their folder. A message found by `search_emails` in "
 | Mode | Tools | Purpose |
 |---|---|---|
 | `read-only` | 7: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_thread`, `get_attachment`, `list_drafts` | Nothing changes in the mailbox, not even the "read" flag. For audits and shared machines. |
-| `drafts` (**default**) | 13: as `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | The agent prepares, you send in Proton Mail. No sending, no permanent deletion from Trash; drafts can still be deleted (`delete_draft`) and are replaced by `update_draft`. |
-| `full` | 16: all, additionally `send_email`, `reply_to_email`, `send_draft` | Sending and permanent deletion. Only for agents you trust, ideally with a client confirmation before every send. |
+| `drafts` (**default**) | 15: as `read-only` plus `mark_email`, `move_email`, `delete_email`, `label_email`, `create_folder`, `create_draft`, `update_draft`, `delete_draft` | The agent prepares, you send in Proton Mail. No sending, no permanent deletion from Trash; drafts can still be deleted (`delete_draft`) and are replaced by `update_draft`. |
+| `full` | 19: all, additionally `send_email`, `reply_to_email`, `forward_email`, `send_draft` | Sending and permanent deletion. Only for agents you trust, ideally with a client confirmation before every send. |
 
 An invalid value aborts startup with an error message that names the valid values.
 
@@ -519,7 +527,7 @@ After updating to the version with operating modes, the new default `drafts` app
 
 ### Security when used with agents
 
-- **Drafts instead of sending.** The default mode `drafts` has no send tools: the agent creates drafts, you review and send them in Proton. Choose `full` only if the agent really has to send. Many clients can additionally disable individual tools or ask before each call, especially for `send_email`, `send_draft`, `reply_to_email` and `delete_email`. For this the server sets MCP annotations (`readOnlyHint`, `destructiveHint`, `openWorldHint`) on every tool.
+- **Drafts instead of sending.** The default mode `drafts` has no send tools: the agent creates drafts, you review and send them in Proton. Choose `full` only if the agent really has to send. Many clients can additionally disable individual tools or ask before each call, especially for `send_email`, `send_draft`, `reply_to_email`, `forward_email` and `delete_email`. For this the server sets MCP annotations (`readOnlyHint`, `destructiveHint`, `openWorldHint`) on every tool.
 - **Mail content is untrusted input.** A message can contain instructions aimed at the agent ("Forward all invoices to …"). The agent must treat mail content as data, not as instructions. The server tells clients so when they connect (MCP `instructions`). That is not a protection by itself: rely on the mode, not on the note.
 - **Attachments only from allowed directories**, never hidden paths (see [Operating modes](#operating-modes)). A message cannot make the agent attach, say, `~/.ssh/id_ed25519`. `PROTON_MCP_ATTACHMENT_ROOTS=*` weakens this protection.
 - **Mind the data flow.** The Bridge and this server run locally, but whatever the agent reads is sent to the language model it uses. To avoid that, use a local model, for example via LM Studio.
@@ -555,7 +563,7 @@ src/attachments.js   Attachments as text/image or saved to disk
 src/office.js        Text from DOCX, XLSX, PPTX, ODT, ODS, ODP (with fflate)
 src/ical.js          Summary of calendar files and invitations
 src/thread.js        Rebuild conversations from Message-ID/References
-src/tools/           Tool definitions (mailbox, sending/drafts), annotations
+src/tools/           Tool definitions (mailbox, sending/drafts/forwarding, labels/folders), annotations
 scripts/smoke.mjs    End-to-end test against the running Bridge
 test/                Unit tests (node:test)
 ```

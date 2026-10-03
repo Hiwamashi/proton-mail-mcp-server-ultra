@@ -1,5 +1,29 @@
 # Spec Delta
 
+## MODIFIED Requirements
+
+### Requirement: Move email
+`move_email` SHALL move one message by UID from `sourceFolder` (default `INBOX`) to `destinationFolder` and return `success`, the old `uid`, `from`, `to` and the message's `newUid` in the destination (or `null` if the server does not report it). Several messages of one folder SHALL be movable at once with `uids` (see "Bulk operations").
+
+#### Scenario: Archive a message
+- **WHEN** `move_email` moves UID 42 from INBOX to Archive
+- **THEN** the message is in Archive and the result contains its new UID there
+
+#### Scenario: Message not found
+- **WHEN** the UID does not exist in the source folder
+- **THEN** an error says that no message with that UID exists in the folder and that UIDs are per folder
+
+### Requirement: Mark email
+`mark_email` SHALL set or remove a flag on one message: `read`/`unread` change `\Seen`, `flag`/`unflag` change `\Flagged` (starred in Proton). The result SHALL contain `success`, `uid` and `action`. A UID that does not exist in the folder SHALL fail with an error instead of reporting success. Several messages of one folder SHALL be markable at once with `uids` (see "Bulk operations").
+
+#### Scenario: Star a message
+- **WHEN** `mark_email` is called with `action: "flag"`
+- **THEN** the message is starred in Proton Mail
+
+#### Scenario: Unknown UID
+- **WHEN** `mark_email` is called with a UID that does not exist in the folder
+- **THEN** an error says that no message with that UID exists in the folder
+
 ## ADDED Requirements
 
 ### Requirement: Bulk operations

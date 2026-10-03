@@ -30,10 +30,14 @@ Die Dokumentation folgt dem Code exakt – es werden keine geplanten oder mögli
 | **mailbox/move-email.md** | Mail in anderen Ordner verschieben |
 | **mailbox/mark-email.md** | Mail als gelesen/ungelesen oder markiert/unmarkiert setzen |
 | **mailbox/delete-email.md** | Mail löschen oder endgültig löschen |
+| **mailbox/bulk-operations.md** | `uids` für Verschieben, Markieren, Löschen: bis 500 Mails in einem Aufruf, `processed`/`notFound` |
+| **labels/label-email.md** | Proton-Labels setzen und entfernen (COPY/EXPUNGE im Label-Ordner) |
+| **labels/create-folder.md** | Ordner oder Label anlegen |
 | **compose/reply-logic.md** | Antwort-Logik: Empfänger bestimmen, Betreff, Zitat, Zeitzone |
 | **compose/send-email.md** | Neue Mail verfassen und sofort versenden |
 | **compose/reply-to-email.md** | Auf Mail antworten und sofort versenden |
-| **compose/create-draft.md** | Mail als Entwurf speichern (neu oder als Antwort) |
+| **compose/forward-email.md** | Weiterleiten: `forward_email` und Weiterleitungs-Entwürfe mit Kopfblock und Original-Anhängen |
+| **compose/create-draft.md** | Mail als Entwurf speichern (neu, als Antwort oder als Weiterleitung) |
 | **compose/list-drafts.md** | Entwürfe auflisten |
 | **compose/update-draft.md** | Entwurf ändern (Empfänger, Betreff, Body, Anhänge) |
 | **compose/send-draft.md** | Entwurf versenden und aus Entwürfen entfernen |
@@ -87,10 +91,14 @@ The documentation tracks the code exactly – no planned or possible features ar
 | **mailbox/move-email.md** | Move message to another folder |
 | **mailbox/mark-email.md** | Mark message as read/unread or flagged/unflagged |
 | **mailbox/delete-email.md** | Delete message or permanently delete |
+| **mailbox/bulk-operations.md** | `uids` for move, mark, delete: up to 500 messages in one call, `processed`/`notFound` |
+| **labels/label-email.md** | Add and remove Proton labels (COPY/EXPUNGE in the label folder) |
+| **labels/create-folder.md** | Create a folder or label |
 | **compose/reply-logic.md** | Reply logic: determine recipients, subject, quote, timezone |
 | **compose/send-email.md** | Compose new message and send immediately |
 | **compose/reply-to-email.md** | Reply to message and send immediately |
-| **compose/create-draft.md** | Save message as draft (new or as reply) |
+| **compose/forward-email.md** | Forwarding: `forward_email` and forward drafts with header block and original attachments |
+| **compose/create-draft.md** | Save message as draft (new, as reply or as forward) |
 | **compose/list-drafts.md** | List drafts |
 | **compose/update-draft.md** | Modify draft (recipients, subject, body, attachments) |
 | **compose/send-draft.md** | Send draft and remove it from drafts |

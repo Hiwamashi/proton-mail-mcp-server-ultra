@@ -18,7 +18,8 @@ Löscht eine Mail: Liegt sie nicht im Papierkorb, wird sie dorthin verschoben. L
 
 | Parameter | Typ | Beschreibung |
 |---|---|---|
-| `uid` | number | UID der Mail |
+| `uid` | number | UID der Mail (genau eins von `uid` und `uids`) |
+| `uids` | number[] | 1 bis 500 UIDs desselben Ordners, siehe `bulk-operations.md` |
 | `folder` | string | Ordner (Standard: `"INBOX"`) |
 
 ## Rückgabe
@@ -78,12 +79,14 @@ Beim Löschen aus dem Papierkorb kann die UID nach dem `messageDelete()` nicht w
 Falls die Mail nicht existiert:
 
 ```
-Error: Could not move UID 999 from "INBOX" to Trash – does it exist there?
+No message with UID 999 in folder "INBOX". UIDs are per folder – check the folder name.
 ```
 
 Das Tool nutzt `{ idempotent: false }` bei Schreibvorgängen, daher wird ein Fehler nicht automatisch wiederholt.
 
 Falls die Bridge den Papierkorb nicht kennt: Fallback zu `"Trash"` wird verwendet.
+
+Mit `uids` werden alle vorhandenen Mails in einem Befehl verschoben bzw. (im Papierkorb, nur `full`) gelöscht; die Rückgabe enthält `processed` und `notFound` (siehe `bulk-operations.md`).
 
 ---
 
@@ -103,7 +106,8 @@ Deletes a message: if it is not in Trash, moves it there. If it is already in Tr
 
 | Parameter | Type | Description |
 |---|---|---|
-| `uid` | number | UID of the message |
+| `uid` | number | UID of the message (exactly one of `uid` and `uids`) |
+| `uids` | number[] | 1 to 500 UIDs of the same folder, see `bulk-operations.md` |
 | `folder` | string | Folder (default: `"INBOX"`) |
 
 ## Return
@@ -163,9 +167,11 @@ When deleting from Trash, the UID cannot be reused after `messageDelete()`.
 If the message does not exist:
 
 ```
-Error: Could not move UID 999 from "INBOX" to Trash – does it exist there?
+No message with UID 999 in folder "INBOX". UIDs are per folder – check the folder name.
 ```
 
 The tool uses `{ idempotent: false }` for write operations, so errors are not automatically retried.
 
 If the Bridge does not know the Trash folder: fallback to `"Trash"` is used.
+
+With `uids`, all existing messages are moved (or, in Trash and only in `full`, deleted) in one command; the result contains `processed` and `notFound` (see `bulk-operations.md`).

@@ -20,7 +20,7 @@ Speichert eine Mail als Entwurf, ohne sie zu versenden. Der Entwurf ist sichtbar
 |---|---|---|
 | `to` | string | Empfänger (optional für Antwort-Entwürfe) |
 | `subject` | string | Betreff (optional für Antwort-Entwürfe) |
-| `body` | string | Plain-Text-Body (erforderlich) |
+| `body` | string | Plain-Text-Body (erforderlich, außer bei Weiterleitungs-Entwürfen; dort die Einleitung) |
 | `html` | string | HTML-Version (optional) |
 | `cc` | string | CC-Empfänger (optional) |
 | `bcc` | string | BCC-Empfänger (optional) |
@@ -29,6 +29,9 @@ Speichert eine Mail als Entwurf, ohne sie zu versenden. Der Entwurf ist sichtbar
 | `replyFolder` | string | Ordner der Original-Mail (Standard: `"INBOX"`) |
 | `replyAll` | boolean | Alle antworten (Standard: `false`) |
 | `quoteOriginal` | boolean | Zitat anhängen (Standard: `true`) |
+| `forwardUid` | number | UID der weiterzuleitenden Mail (optional, für Weiterleitungs-Entwürfe) |
+| `forwardFolder` | string | Ordner dieser Mail (Standard: `"INBOX"`) |
+| `includeAttachments` | boolean | Bei Weiterleitungen die Original-Anhänge übernehmen (Standard: `true`) |
 
 ## Rückgabe
 
@@ -67,6 +70,10 @@ Einfach `to`, `subject`, `body` übergeben. Der Entwurf wird im Drafts-Ordner ge
 
 Diese Werte können explizit mit `to`, `subject` überschrieben werden.
 
+### Weiterleitungs-Entwürfe
+
+Übergeben Sie `forwardUid` und optional `forwardFolder`. Betreff mit `Fwd:`, Kopfblock, Original-Text und Original-Anhänge werden ergänzt; `to` darf leer bleiben. Es wird kein Threading gesetzt. `replyToUid` und `forwardUid` zusammen werden abgelehnt. Einzelheiten stehen in `forward-email.md`.
+
 ### Append-then-Delete-Strategie
 
 Der Entwurf wird direkt mit `append()` zum Drafts-Ordner hinzugefügt. Falls Fehler später beim Aktualisieren auftreten, bleibt zumindest eine Kopie.
@@ -86,6 +93,10 @@ Falls Original-Mail nicht existiert (bei Antwort-Entwürfen):
 ```
 Error: No message with UID 999 in folder "INBOX".
 ```
+
+Falls `replyToUid` und `forwardUid` zusammen übergeben werden: `Use either replyToUid or forwardUid, not both: a draft is a reply or a forward.`
+
+Falls `body` fehlt und der Entwurf keine Weiterleitung ist: `body is required unless the draft forwards an email (forwardUid).`
 
 Falls kein Ordner zum Speichern gefunden wird: IMAP-Fehler.
 
@@ -113,7 +124,7 @@ Saves a message as a draft without sending it. The draft is visible in Proton Ma
 |---|---|---|
 | `to` | string | Recipients (optional for reply drafts) |
 | `subject` | string | Subject line (optional for reply drafts) |
-| `body` | string | Plain text body (required) |
+| `body` | string | Plain text body (required, except for forward drafts; there the introduction) |
 | `html` | string | HTML version (optional) |
 | `cc` | string | CC recipients (optional) |
 | `bcc` | string | BCC recipients (optional) |
@@ -122,6 +133,9 @@ Saves a message as a draft without sending it. The draft is visible in Proton Ma
 | `replyFolder` | string | Folder of original message (default: `"INBOX"`) |
 | `replyAll` | boolean | Reply to all (default: `false`) |
 | `quoteOriginal` | boolean | Append quote (default: `true`) |
+| `forwardUid` | number | UID of the message to forward (optional, for forward drafts) |
+| `forwardFolder` | string | Folder of that message (default: `"INBOX"`) |
+| `includeAttachments` | boolean | For forwards, carry over the original attachments (default: `true`) |
 
 ## Return
 
@@ -160,6 +174,10 @@ Pass `replyToUid` and optionally `replyFolder`. Then automatically calculated:
 
 These values can be explicitly overridden with `to`, `subject`.
 
+### Forward drafts
+
+Pass `forwardUid` and optionally `forwardFolder`. A `Fwd:` subject, header block, original text and original attachments are added; `to` may stay empty. No threading is set. `replyToUid` and `forwardUid` together are refused. Details are in `forward-email.md`.
+
 ### Append-then-delete strategy
 
 The draft is directly added to the Drafts folder with `append()`. If errors occur later during update, at least a copy remains.
@@ -179,6 +197,10 @@ If original message does not exist (for reply drafts):
 ```
 Error: No message with UID 999 in folder "INBOX".
 ```
+
+If `replyToUid` and `forwardUid` are given together: `Use either replyToUid or forwardUid, not both: a draft is a reply or a forward.`
+
+If `body` is missing and the draft is not a forward: `body is required unless the draft forwards an email (forwardUid).`
 
 If no folder found to save: IMAP error.
 

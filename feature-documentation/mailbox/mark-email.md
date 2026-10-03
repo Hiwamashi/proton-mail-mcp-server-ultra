@@ -16,7 +16,8 @@ Setzt oder entfernt IMAP-Flags einer Mail: gelesen/ungelesen, markiert/unmarkier
 
 | Parameter | Typ | Beschreibung |
 |---|---|---|
-| `uid` | number | UID der Mail |
+| `uid` | number | UID der Mail (genau eins von `uid` und `uids`) |
+| `uids` | number[] | 1 bis 500 UIDs desselben Ordners, siehe `bulk-operations.md` |
 | `folder` | string | Ordner (Standard: `"INBOX"`) |
 | `action` | string | `"read"`, `"unread"`, `"flag"`, oder `"unflag"` |
 
@@ -49,7 +50,7 @@ Flags sind unabhängig – `read` ändert nicht `flag` und umgekehrt.
 
 ## Fehlerbehandlung
 
-Falls die Mail nicht existiert: kein Fehler, sondern stilles Fehlschlag (IMAP-Befehl schlägt fehl, wird an MCP zurückgegeben).
+Falls die Mail nicht existiert: `No message with UID … in folder "…". UIDs are per folder – check the folder name.` (früher meldete das Tool in diesem Fall Erfolg, ohne etwas zu tun). Mit `uids` stehen fehlende UIDs in `notFound`; nur wenn keine existiert, kommt der Fehler (siehe `bulk-operations.md`).
 
 Das Tool nutzt `{ idempotent: true }` (Standardeinstellung), daher wird ein Fehler automatisch einmal wiederholt.
 
@@ -69,7 +70,8 @@ Sets or removes IMAP flags on a message: read/unread, flagged/unflagged.
 
 | Parameter | Type | Description |
 |---|---|---|
-| `uid` | number | UID of the message |
+| `uid` | number | UID of the message (exactly one of `uid` and `uids`) |
+| `uids` | number[] | 1 to 500 UIDs of the same folder, see `bulk-operations.md` |
 | `folder` | string | Folder (default: `"INBOX"`) |
 | `action` | string | `"read"`, `"unread"`, `"flag"`, or `"unflag"` |
 
@@ -102,6 +104,6 @@ Flags are independent – `read` does not affect `flag` and vice versa.
 
 ## Error handling
 
-If the message does not exist: no error, but silent failure (IMAP command fails, returned to MCP).
+If the message does not exist: `No message with UID … in folder "…". UIDs are per folder – check the folder name.` (previously the tool reported success without doing anything). With `uids`, missing UIDs are listed in `notFound`; only if none exists does the error occur (see `bulk-operations.md`).
 
 The tool uses `{ idempotent: true }` (default), so errors are automatically retried once.
