@@ -21,11 +21,15 @@ Flags returned by `read_email` SHALL always reflect the server state at the time
 - **THEN** the second result shows `\Seen`
 
 ### Requirement: Partial download of large messages
-For messages larger than `PROTON_MCP_PARTIAL_FETCH_BYTES` (default 5242880), `read_email` SHALL download only the headers and the text and HTML body parts, and `get_attachment` SHALL download only the requested attachment part. The output SHALL be the same as for a full download.
+For messages larger than `PROTON_MCP_PARTIAL_FETCH_BYTES` (default 5242880), `read_email` SHALL NOT download the content of attachment parts: it SHALL download the message structure, the headers, the text and HTML body parts and at most a few hundred bytes per attachment to determine its size. `get_attachment` SHALL download only the requested attachment part. The output SHALL be the same as for a full download. Messages whose structure cannot be mapped with certainty (for example encrypted or signed-and-enveloped messages, unknown multipart types, or attachments in encodings other than base64 or identity) SHALL be downloaded in full instead.
 
 #### Scenario: Large mail with scans
 - **WHEN** `read_email` is called for a 30 MB message with three scanned PDFs
 - **THEN** the body is returned without downloading the PDF parts
+
+#### Scenario: Unsupported structure
+- **WHEN** `read_email` is called for a large `multipart/encrypted` message
+- **THEN** the message is downloaded in full and the output is unchanged
 
 ### Requirement: Stable attachment indexes
 For any message, the attachment index shown by `read_email` SHALL address the same attachment in `get_attachment` and in `update_draft` (`removeAttachments`), regardless of message size, cache state or download method.
