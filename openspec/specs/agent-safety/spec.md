@@ -7,7 +7,7 @@ Protects the user's mailbox and local files from agents that act on untrusted ma
 
 ### Requirement: Operating modes
 The server SHALL support `PROTON_MCP_MODE` with the values `read-only`, `drafts` and `full`; the default SHALL be `drafts`. Tools not allowed in the active mode SHALL NOT be registered, so agents cannot see or call them:
-- `read-only`: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_attachment`, `list_drafts`.
+- `read-only`: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_thread`, `get_attachment`, `list_drafts`.
 - `drafts`: everything in `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft`.
 - `full`: all tools, including `send_email`, `reply_to_email` and `send_draft`.
 An unknown value SHALL stop the server at startup with an error listing the valid values. The active mode SHALL be written to stderr at startup.
