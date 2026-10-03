@@ -18,7 +18,8 @@ Agents answering mail need context the server does not provide today: the conver
 
 ### Modified Capabilities
 - `mail-reading`: ADDED requirement for the additional search criteria.
-- `attachments`: ADDED requirements for office documents and calendar files.
+- `attachments`: ADDED requirements for office documents and calendar files; MODIFIED "Render attachments by type" (ICS leaves the plain-text list) and "Save files that cannot be shown" (the "Word document" scenario now covers a legacy `.doc`; a new `.zip` scenario keeps the generic case).
+- `agent-safety`: MODIFIED requirement "Operating modes" – `get_thread` joins the `read-only` tool list (and thereby every mode).
 
 ## Impact
 

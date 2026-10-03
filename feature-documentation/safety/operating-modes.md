@@ -36,6 +36,7 @@ Nicht verfügbare Tools werden **gar nicht registriert**. Der Agent sieht sie ni
 | `list_emails` | ja | ja | ja |
 | `search_emails` | ja | ja | ja |
 | `read_email` | ja (ohne `markAsRead`) | ja | ja |
+| `get_thread` | ja | ja | ja |
 | `get_attachment` | ja | ja | ja |
 | `list_drafts` | ja | ja | ja |
 | `mark_email` | – | ja | ja |
@@ -48,7 +49,7 @@ Nicht verfügbare Tools werden **gar nicht registriert**. Der Agent sieht sie ni
 | `reply_to_email` | – | – | ja |
 | `send_draft` | – | – | ja |
 
-Anzahl: 6 Tools in `read-only`, 12 in `drafts`, 15 in `full`.
+Anzahl: 7 Tools in `read-only`, 13 in `drafts`, 16 in `full`.
 
 Zwei Verhaltensunterschiede innerhalb eines Tools:
 
@@ -84,6 +85,7 @@ Jedes Tool trägt `title` und die MCP-Annotationen `readOnlyHint`, `destructiveH
 | `list_emails` | List emails | ja | nein | ja | nein |
 | `search_emails` | Search emails | ja | nein | ja | nein |
 | `read_email` | Read email | ja | nein | ja | nein |
+| `get_thread` | Get conversation | ja | nein | ja | nein |
 | `get_attachment` | Read attachment | ja | nein | ja | nein |
 | `list_drafts` | List drafts | ja | nein | ja | nein |
 | `mark_email` | Mark email | nein | nein | ja | nein |
@@ -156,6 +158,7 @@ Unavailable tools are **not registered at all**. The agent does not see them ins
 | `list_emails` | yes | yes | yes |
 | `search_emails` | yes | yes | yes |
 | `read_email` | yes (without `markAsRead`) | yes | yes |
+| `get_thread` | yes | yes | yes |
 | `get_attachment` | yes | yes | yes |
 | `list_drafts` | yes | yes | yes |
 | `mark_email` | – | yes | yes |
@@ -168,7 +171,7 @@ Unavailable tools are **not registered at all**. The agent does not see them ins
 | `reply_to_email` | – | – | yes |
 | `send_draft` | – | – | yes |
 
-Count: 6 tools in `read-only`, 12 in `drafts`, 15 in `full`.
+Count: 7 tools in `read-only`, 13 in `drafts`, 16 in `full`.
 
 Two behavior differences inside a tool:
 
@@ -204,6 +207,7 @@ Every tool carries `title` and the MCP annotations `readOnlyHint`, `destructiveH
 | `list_emails` | List emails | yes | no | yes | no |
 | `search_emails` | Search emails | yes | no | yes | no |
 | `read_email` | Read email | yes | no | yes | no |
+| `get_thread` | Get conversation | yes | no | yes | no |
 | `get_attachment` | Read attachment | yes | no | yes | no |
 | `list_drafts` | List drafts | yes | no | yes | no |
 | `mark_email` | Mark email | no | no | yes | no |

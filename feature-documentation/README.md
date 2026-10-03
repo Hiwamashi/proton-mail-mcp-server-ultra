@@ -20,10 +20,13 @@ Die Dokumentation folgt dem Code exakt – es werden keine geplanten oder mögli
 | **reading/body-extraction.md** | Aufbereitung von Mail-Body: HTML→Text, Linkbehandlung, Zitat-Erkennung, Paginierung |
 | **reading/list-folders.md** | Aufzählung aller Ordner mit Sonderfunktion und Nachrichtenanzahl |
 | **reading/list-emails.md** | Neueste Mails eines Ordners auflisten, paginierbar |
-| **reading/search-emails.md** | Suche nach Absender, Empfänger, Betreff, Body, Datum, etc. |
+| **reading/search-emails.md** | Suche nach Absender, Empfänger, Cc, Betreff, Body, Datum, Größe, beantwortet, Anhängen, etc. |
 | **reading/read-email.md** | Detailliertes Lesen einer Mail: Header, aufbereiteter Body, Anhängsliste |
-| **reading/get-attachment.md** | Anhang öffnen: PDF als Text, Bilder direkt (bis 1 MB), RFC822 gerendert, Speichern |
+| **reading/get-attachment.md** | Anhang öffnen: PDF und Office als Text, Kalender zusammengefasst, Bilder direkt (bis 1 MB), RFC822 gerendert, Speichern |
 | **reading/message-cache.md** | Cache geparster Mails, teilweiser Download großer Mails, Bild-Limit, Rückbau, Messwerte |
+| **reading/get-thread.md** | Ganze Konversation einer Mail über alle Ordner, mit Bodies in einem Zeichenbudget |
+| **reading/office-attachments.md** | Text aus DOCX, XLSX, PPTX, ODT, ODS, ODP; Schutz vor ZIP-Bomben; verschlüsselte und alte Formate |
+| **reading/calendar-attachments.md** | Zusammenfassung von Kalenderdateien und Einladungen, Zeitzonen, `raw` |
 | **mailbox/move-email.md** | Mail in anderen Ordner verschieben |
 | **mailbox/mark-email.md** | Mail als gelesen/ungelesen oder markiert/unmarkiert setzen |
 | **mailbox/delete-email.md** | Mail löschen oder endgültig löschen |
@@ -74,10 +77,13 @@ The documentation tracks the code exactly – no planned or possible features ar
 | **reading/body-extraction.md** | Message body processing: HTML→text, link handling, quote detection, pagination |
 | **reading/list-folders.md** | Enumerate all folders with special-use flag and message count |
 | **reading/list-emails.md** | List newest messages in a folder, pageable |
-| **reading/search-emails.md** | Search by sender, recipient, subject, body, date, etc. |
+| **reading/search-emails.md** | Search by sender, recipient, Cc, subject, body, date, size, answered, attachments, etc. |
 | **reading/read-email.md** | Detailed reading of a message: headers, processed body, attachment list |
-| **reading/get-attachment.md** | Open attachment: PDF as text, images directly (up to 1 MB), RFC822 rendered, save |
+| **reading/get-attachment.md** | Open attachment: PDF and Office as text, calendars summarized, images directly (up to 1 MB), RFC822 rendered, save |
 | **reading/message-cache.md** | Cache of parsed messages, partial download of large messages, image limit, rollback, measurements |
+| **reading/get-thread.md** | Whole conversation of a message across all folders, with bodies within one character budget |
+| **reading/office-attachments.md** | Text from DOCX, XLSX, PPTX, ODT, ODS, ODP; ZIP bomb protection; encrypted and legacy formats |
+| **reading/calendar-attachments.md** | Summary of calendar files and invitations, time zones, `raw` |
 | **mailbox/move-email.md** | Move message to another folder |
 | **mailbox/mark-email.md** | Mark message as read/unread or flagged/unflagged |
 | **mailbox/delete-email.md** | Delete message or permanently delete |

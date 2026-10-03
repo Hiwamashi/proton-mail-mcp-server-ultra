@@ -10,7 +10,7 @@
 
 ## Zweck
 
-Öffnet einen Anhang einer Mail. PDFs und Textdateien werden als Text zurückgegeben, Bilder als Base64-Daten, angehängte Mails gerendert, Dateien anderer Typen auf die Festplatte gespeichert.
+Öffnet einen Anhang einer Mail. PDFs, Office- und OpenDocument-Dateien sowie Textdateien kommen als Text zurück. Kalenderdateien kommen als Zusammenfassung plus Rohtext, Bilder als Base64-Daten, angehängte Mails gerendert. Dateien anderer Typen werden auf die Festplatte gespeichert.
 
 ## Parameter
 
@@ -22,6 +22,7 @@
 | `save` | boolean | `false` | In das Attachment-Verzeichnis speichern, statt anzuzeigen |
 | `offset` | number | `0` | Startposition für lange Textinhalte |
 | `maxChars` | number | `20000` | Max. Zeichen für Text (min. 500, max. 100000) |
+| `raw` | boolean | `false` | Nur Kalenderdateien: nur den iCalendar-Rohtext ohne Zusammenfassung |
 
 ## Rückgabe
 
@@ -62,7 +63,21 @@ Falls nicht extrahierbar (verschlüsselt, gescannt):
 ]
 ```
 
-### Textdateien (.txt, .csv, .json, .md, .yaml, .ics, .vcf, etc.)
+### Office- und OpenDocument-Dateien (.docx, .xlsx, .pptx, .odt, .ods, .odp)
+
+```javascript
+[
+  { type: "text", text: "Attachment [0] Vertrag.docx (application/vnd.openxmlformats-officedocument.wordprocessingml.document, 38 KB) from UID 105\nWord document as text\nContent: chars 0–10643 of 10643\n---\n# Rahmenvertrag\n…" }
+]
+```
+
+Verschlüsselte, beschädigte und zu große Dateien (über 50 MB entpackt) werden mit Begründung gespeichert, ebenso `.doc`, `.xls` und `.ppt` (`Legacy binary Office format (.doc/.xls/.ppt) – its text cannot be read. Saved to: …`). Einzelheiten stehen in `office-attachments.md`.
+
+### Kalenderdateien (.ics, text/calendar, application/ics)
+
+Erst kommt eine Zusammenfassung pro Termin (Methode, Titel, Start und Ende mit Zeitzone und UTC, ganztägig, Ort, Organisator, Teilnehmer mit Status, Serie, Beschreibung), danach `--- Raw iCalendar ---` und der Rohtext. Mit `raw: true` kommt nur der Rohtext. Einzelheiten stehen in `calendar-attachments.md`.
+
+### Textdateien (.txt, .csv, .json, .md, .yaml, .vcf, etc.)
 
 ```javascript
 [
@@ -72,7 +87,7 @@ Falls nicht extrahierbar (verschlüsselt, gescannt):
 
 HTML-Dateien werden zu Text konvertiert (Links inklusive).
 
-### Andere Dateitypen (Word, Excel, ZIP, etc.)
+### Andere Dateitypen (ZIP, Bilder in anderen Formaten, etc.)
 
 ```javascript
 [
@@ -145,7 +160,7 @@ Falls `save: true` und Verzeichnis nicht beschreibbar: Fehler beim Speichern.
 
 ## Purpose
 
-Opens an attachment from a message. PDFs and text files are returned as text, images as Base64 data, attached messages rendered, other file types saved to disk.
+Opens an attachment from a message. PDFs, Office and OpenDocument files and text files are returned as text. Calendar files come as a summary plus the raw text, images as Base64 data, attached messages rendered. Other file types are saved to disk.
 
 ## Parameters
 
@@ -157,6 +172,7 @@ Opens an attachment from a message. PDFs and text files are returned as text, im
 | `save` | boolean | `false` | Save to attachment directory instead of displaying |
 | `offset` | number | `0` | Start position for long text content |
 | `maxChars` | number | `20000` | Max characters for text (min 500, max 100000) |
+| `raw` | boolean | `false` | Calendar files only: only the raw iCalendar text without the summary |
 
 ## Return
 
@@ -197,7 +213,21 @@ If not extractable (encrypted, scanned):
 ]
 ```
 
-### Text files (.txt, .csv, .json, .md, .yaml, .ics, .vcf, etc.)
+### Office and OpenDocument files (.docx, .xlsx, .pptx, .odt, .ods, .odp)
+
+```javascript
+[
+  { type: "text", text: "Attachment [0] Vertrag.docx (application/vnd.openxmlformats-officedocument.wordprocessingml.document, 38 KB) from UID 105\nWord document as text\nContent: chars 0–10643 of 10643\n---\n# Rahmenvertrag\n…" }
+]
+```
+
+Encrypted, damaged and too large files (over 50 MB inflated) are saved with the reason, as are `.doc`, `.xls` and `.ppt` (`Legacy binary Office format (.doc/.xls/.ppt) – its text cannot be read. Saved to: …`). Details are in `office-attachments.md`.
+
+### Calendar files (.ics, text/calendar, application/ics)
+
+First comes a summary per event (method, title, start and end with time zone and UTC, all-day, location, organizer, attendees with status, recurrence, description), then `--- Raw iCalendar ---` and the raw text. With `raw: true` only the raw text is returned. Details are in `calendar-attachments.md`.
+
+### Text files (.txt, .csv, .json, .md, .yaml, .vcf, etc.)
 
 ```javascript
 [
@@ -207,7 +237,7 @@ If not extractable (encrypted, scanned):
 
 HTML files are converted to text (links included).
 
-### Other file types (Word, Excel, ZIP, etc.)
+### Other file types (ZIP, images in other formats, etc.)
 
 ```javascript
 [

@@ -6,7 +6,7 @@
 
 # Tool: search_emails
 
-**Datei:** src/tools/mailbox.js
+**Datei:** src/tools/mailbox.js (`searchCriteria()`, `searchMessages()`)
 
 ## Zweck
 
@@ -26,6 +26,11 @@ Sucht Mails in einem Ordner. Alle Kriterien werden mit AND verknüpft. Ergebniss
 | `before` | string | Vor diesem Datum |
 | `unseen` | boolean | Nur ungelesene Mails |
 | `flagged` | boolean | Nur markierte/mit Stern versehene Mails |
+| `cc` | string | Cc-Adresse oder Name enthält |
+| `larger` | number | Nur Mails größer als so viele Bytes (mindestens 1) |
+| `smaller` | number | Nur Mails kleiner als so viele Bytes |
+| `answered` | boolean | `true`: nur beantwortete Mails, `false`: nur unbeantwortete (Flag `\Answered`) |
+| `hasAttachments` | boolean | `true`: nur Mails mit mindestens einem echten Anhang, `false`: nur Mails ohne. Inline-Bilder zählen nicht |
 | `limit` | number | Max. Ergebnisse (Standard: 20, max. 100) |
 | `offset` | number | Überspringen Sie diese vielen Treffer (für Paging) |
 
@@ -57,7 +62,7 @@ MCP-Text-Block mit Struktur:
 }
 ```
 
-Falls kein Ergebnis: `totalMatches: 0, showing: 0, messages: []`.
+Falls kein Ergebnis: der Text `No emails in "<folder>" matched the search criteria.`
 
 ## Besonderheiten
 
@@ -90,22 +95,27 @@ from: "alice", subject: "meeting"
 
 Falls keine Kriterien angegeben sind, sucht IMAP nach `all` (alle Mails).
 
+### Zusätzliche Kriterien
+
+`cc`, `larger`, `smaller` und `answered` gehen direkt in die IMAP-Suche (`CC`, `LARGER`, `SMALLER`, `ANSWERED`/`UNANSWERED`). Live gemessen am 2026-10-03: `answered: false` mit `hasAttachments: true` in INBOX dauert 12 ms.
+
+`hasAttachments` gibt es in IMAP nicht. Im Kandidatenschritt, der für die Sortierung ohnehin `internalDate` holt, wird dann zusätzlich `BODYSTRUCTURE` geholt und mit `hasAttachments()` gefiltert. Das ist dieselbe Definition wie im Feld `hasAttachments` der Ergebnisse: Ein Teil mit Disposition `attachment` zählt, Inline-Bilder zählen nicht. `totalMatches`, `nextOffset` und das Paging zählen nur Mails, die den Filter bestehen. Ohne `hasAttachments` wird kein `BODYSTRUCTURE` geholt.
+
+Bei mehr als 3000 IMAP-Treffern werden nur die 3000 höchsten UIDs geprüft. `totalMatches` zählt dann nur die passenden Mails unter diesen 3000, und die Notiz lautet: `Only the 3000 highest of <n> UIDs were checked for attachments and sorted – narrow the search.`
+
+Besteht nach dem Filter keine Mail, kommt dieselbe Meldung wie ohne Treffer.
+
 ## Implementierung
 
 ```javascript
-// IMAP SEARCH mit Kriterien
-const criteria = {};
-if (from) criteria.from = from;
-if (to) criteria.to = to;
-// ... weitere ...
-if (Object.keys(criteria).length === 0) criteria.all = true;
+// searchCriteria(): Argumente → imapflow-Kriterien (hasAttachments fehlt bewusst)
+const uids = await client.search(searchCriteria(args), { uid: true });
 
-const uids = await client.search(criteria, { uid: true });
-
-// UIDs sind nicht chronologisch – daher sortieren
+// UIDs sind nicht chronologisch – daher sortieren; hasAttachments filtert im selben Schritt
 const candidates = uids.length > MAX_SORT_CANDIDATES ? uids.slice(-MAX_SORT_CANDIDATES) : uids;
-const dated = [];
-for await (const msg of client.fetch(candidates.join(","), { uid: true, internalDate: true })) {
+const query = { uid: true, internalDate: true, ...(wantAttachments !== undefined ? { bodyStructure: true } : {}) };
+for await (const msg of client.fetch(candidates.join(","), query, { uid: true })) {
+  if (wantAttachments !== undefined && hasAttachments(msg.bodyStructure) !== wantAttachments) continue;
   dated.push({ uid: msg.uid, time: new Date(msg.internalDate).getTime() });
 }
 dated.sort((a, b) => b.time - a.time);
@@ -117,13 +127,17 @@ Falls der Ordner nicht existiert: IMAP-Fehler.
 
 Falls Datums-Format ungültig: `Error: Invalid since date "..." – use YYYY-MM-DD.`
 
+## Tests
+
+`test/search.test.js`: Abbildung der Kriterien, `hasAttachments` mit `totalMatches` und Paging, reine Inline-Bilder, Kombination mit `answered` (mit `test/helpers/fake-mailbox.js`).
+
 ---
 
 ## English
 
 # Tool: search_emails
 
-**File:** src/tools/mailbox.js
+**File:** src/tools/mailbox.js (`searchCriteria()`, `searchMessages()`)
 
 ## Purpose
 
@@ -143,6 +157,11 @@ Searches for messages in a folder. All criteria are combined with AND. Results a
 | `before` | string | Before this date |
 | `unseen` | boolean | Only unread messages |
 | `flagged` | boolean | Only flagged/starred messages |
+| `cc` | string | Cc address or name contains |
+| `larger` | number | Only messages larger than this many bytes (at least 1) |
+| `smaller` | number | Only messages smaller than this many bytes |
+| `answered` | boolean | `true`: only replied messages, `false`: only unreplied ones (flag `\Answered`) |
+| `hasAttachments` | boolean | `true`: only messages with at least one real attachment, `false`: only messages without. Inline images do not count |
 | `limit` | number | Max results (default: 20, max 100) |
 | `offset` | number | Skip this many results (for paging) |
 
@@ -174,7 +193,7 @@ MCP text block with structure:
 }
 ```
 
-If no results: `totalMatches: 0, showing: 0, messages: []`.
+If no results: the text `No emails in "<folder>" matched the search criteria.`
 
 ## Details
 
@@ -207,22 +226,27 @@ from: "alice", subject: "meeting"
 
 If no criteria are specified, IMAP searches for `all` (all messages).
 
+### Additional criteria
+
+`cc`, `larger`, `smaller` and `answered` go straight into the IMAP search (`CC`, `LARGER`, `SMALLER`, `ANSWERED`/`UNANSWERED`). Measured live on 2026-10-03: `answered: false` with `hasAttachments: true` in INBOX takes 12 ms.
+
+`hasAttachments` does not exist in IMAP. In the candidate step, which fetches `internalDate` for sorting anyway, `BODYSTRUCTURE` is then fetched as well and filtered with `hasAttachments()`. That is the same definition as in the `hasAttachments` field of the results: a part with disposition `attachment` counts, inline images do not. `totalMatches`, `nextOffset` and paging only count messages that pass the filter. Without `hasAttachments`, no `BODYSTRUCTURE` is fetched.
+
+With more than 3000 IMAP hits, only the 3000 highest UIDs are checked. `totalMatches` then only counts the matching messages among those 3000, and the note reads: `Only the 3000 highest of <n> UIDs were checked for attachments and sorted – narrow the search.`
+
+If no message passes the filter, the reply is the same as for no hits.
+
 ## Implementation
 
 ```javascript
-// IMAP SEARCH with criteria
-const criteria = {};
-if (from) criteria.from = from;
-if (to) criteria.to = to;
-// ... more ...
-if (Object.keys(criteria).length === 0) criteria.all = true;
+// searchCriteria(): arguments → imapflow criteria (hasAttachments deliberately left out)
+const uids = await client.search(searchCriteria(args), { uid: true });
 
-const uids = await client.search(criteria, { uid: true });
-
-// UIDs are not chronological – so sort by date
+// UIDs are not chronological – so sort; hasAttachments filters in the same step
 const candidates = uids.length > MAX_SORT_CANDIDATES ? uids.slice(-MAX_SORT_CANDIDATES) : uids;
-const dated = [];
-for await (const msg of client.fetch(candidates.join(","), { uid: true, internalDate: true })) {
+const query = { uid: true, internalDate: true, ...(wantAttachments !== undefined ? { bodyStructure: true } : {}) };
+for await (const msg of client.fetch(candidates.join(","), query, { uid: true })) {
+  if (wantAttachments !== undefined && hasAttachments(msg.bodyStructure) !== wantAttachments) continue;
   dated.push({ uid: msg.uid, time: new Date(msg.internalDate).getTime() });
 }
 dated.sort((a, b) => b.time - a.time);
@@ -233,3 +257,7 @@ dated.sort((a, b) => b.time - a.time);
 If the folder does not exist: IMAP error.
 
 If date format is invalid: `Error: Invalid since date "..." – use YYYY-MM-DD.`
+
+## Tests
+
+`test/search.test.js`: criteria mapping, `hasAttachments` with `totalMatches` and paging, inline images only, combination with `answered` (using `test/helpers/fake-mailbox.js`).

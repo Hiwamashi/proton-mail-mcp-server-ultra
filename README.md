@@ -25,7 +25,8 @@ Dieses Projekt ist ein Fork von **[tamnys/proton-mail-mcp-server](https://github
 
 - **HTML-Mails sind lesbar.** Bisher kam bei reinen HTML-Mails (rund die Hälfte eines typischen Postfachs) ein leerer Body zurück. Jetzt wird HTML in Text umgewandelt, Bilder, Styles und Tracking-URLs fallen weg. Newsletter, deren Textteil nur aus URLs besteht, werden ebenfalls über das HTML aufbereitet.
 - **Lange Mails kommen seitenweise** (`offset`/`maxChars`), statt den Kontext des Agenten zu sprengen.
-- **Anhänge lassen sich öffnen:** PDFs als Text, Bilder direkt, Textdateien und angehängte Mails gerendert. Alles andere wird lokal gespeichert.
+- **Anhänge lassen sich öffnen:** PDFs, Word, Excel, PowerPoint und OpenDocument als Text, Kalendereinladungen als Zusammenfassung (Zeit mit Zeitzone und UTC, Teilnehmer mit Status), Bilder direkt, Textdateien und angehängte Mails gerendert. Alles andere wird lokal gespeichert.
+- **Ganze Konversationen:** `get_thread` holt zu einer Mail den ganzen Verlauf über alle Ordner, auch die eigenen Antworten aus „Gesendet“, mit gekürzten Bodies in einem Zeichenbudget.
 - **Weniger erneutes Laden:** Ein Cache hält geparste Mails zehn Minuten im Speicher, und große Mails über 5 MB werden nur teilweise geladen (Header und Text, Anhänge einzeln). Beides lässt sich abschalten (siehe Schritt 4).
 - **Entwürfe** erscheinen in Proton unter *Entwürfe* und lassen sich dort weiterbearbeiten. Damit kann ein Agent vorformulieren und ein Mensch vor dem Senden prüfen.
 - **Suchergebnisse sind nach Datum sortiert**, auch in „All Mail“.
@@ -37,9 +38,10 @@ Dieses Projekt ist ein Fork von **[tamnys/proton-mail-mcp-server](https://github
 |---|---|---|
 | `list_folders` | Ordner mit Sonderfunktion und Anzahl (ungelesen) | `read-only` |
 | `list_emails` | Neueste Mails eines Ordners, mit `offset` blätterbar | `read-only` |
-| `search_emails` | Suche nach Absender, Empfänger, Betreff, Body, Volltext, Datum, ungelesen, markiert; neueste zuerst | `read-only` |
+| `search_emails` | Suche nach Absender, Empfänger, Cc, Betreff, Body, Volltext, Datum, Größe, ungelesen, markiert, beantwortet, mit/ohne Anhang; neueste zuerst | `read-only` |
 | `read_email` | Header, lesbarer Body, nummerierte Anhangsliste. Optionen: `format`, `includeLinks`, `stripQuoted`, `offset`, `maxChars`, `markAsRead` (in `read-only` nicht erlaubt) | `read-only` |
-| `get_attachment` | Anhang per Index öffnen oder mit `save: true` speichern | `read-only` |
+| `get_thread` | Ganze Konversation einer Mail über alle Ordner, älteste zuerst, mit Bodies ohne Zitat in einem Zeichenbudget (`includeBodies`, `maxChars`) | `read-only` |
+| `get_attachment` | Anhang per Index öffnen (PDF, Office und OpenDocument als Text, Kalender zusammengefasst, `raw: true` für den Rohtext) oder mit `save: true` speichern | `read-only` |
 | `list_drafts` | Entwürfe auflisten | `read-only` |
 | `move_email`, `mark_email` | Verschieben, gelesen/ungelesen, markieren | `drafts` |
 | `delete_email` | In den Papierkorb (ab `drafts`); im Papierkorb endgültig löschen nur in `full` | `drafts` / `full` |
@@ -60,9 +62,9 @@ UIDs gelten nur innerhalb ihres Ordners. Eine Mail, die `search_emails` in „Al
 
 | Modus | Tools | Zweck |
 |---|---|---|
-| `read-only` | 6: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_attachment`, `list_drafts` | Nichts ändert sich im Postfach, auch kein „gelesen“-Flag. Für Prüfungen und gemeinsam genutzte Rechner. |
-| `drafts` (**Standard**) | 12: wie `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | Der Agent bereitet vor, du sendest in Proton Mail. Kein Senden, kein endgültiges Löschen aus dem Papierkorb; Entwürfe lassen sich weiterhin löschen (`delete_draft`) und werden von `update_draft` ersetzt. |
-| `full` | 15: alle, zusätzlich `send_email`, `reply_to_email`, `send_draft` | Senden und endgültiges Löschen. Nur für Agenten, denen du vertraust, am besten mit Rückfrage des Clients vor jedem Senden. |
+| `read-only` | 7: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_thread`, `get_attachment`, `list_drafts` | Nichts ändert sich im Postfach, auch kein „gelesen“-Flag. Für Prüfungen und gemeinsam genutzte Rechner. |
+| `drafts` (**Standard**) | 13: wie `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | Der Agent bereitet vor, du sendest in Proton Mail. Kein Senden, kein endgültiges Löschen aus dem Papierkorb; Entwürfe lassen sich weiterhin löschen (`delete_draft`) und werden von `update_draft` ersetzt. |
+| `full` | 16: alle, zusätzlich `send_email`, `reply_to_email`, `send_draft` | Senden und endgültiges Löschen. Nur für Agenten, denen du vertraust, am besten mit Rückfrage des Clients vor jedem Senden. |
 
 Ein ungültiger Wert beendet den Start mit einer Fehlermeldung, die die gültigen Werte nennt.
 
@@ -148,6 +150,8 @@ Optionale Einstellungen:
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` | Größtes Bild (1 MB), das `get_attachment` direkt zeigt; größere werden gespeichert. `5242880` stellt das frühere Limit von 5 MB wieder her |
 
 **Hinweis zum Bild-Limit:** Früher kamen Bilder bis 5 MB direkt zurück, jetzt nur noch bis 1 MB. Größere Bilder speichert `get_attachment` und meldet den Pfad. Mit `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` gilt wieder das alte Limit.
+
+**Hinweis zu Kalenderdateien:** `get_attachment` lieferte bei `.ics`-Dateien früher nur den Rohtext. Jetzt steht davor eine Zusammenfassung jedes Termins. Wer nur den Rohtext braucht, ruft `get_attachment` mit `raw: true` auf. Word-, Excel- und PowerPoint-Dateien sowie OpenDocument-Dateien kommen jetzt als Text, statt gespeichert zu werden; `save: true` speichert sie weiterhin.
 
 #### 5. Verbindung testen
 
@@ -264,6 +268,9 @@ src/partial-fetch.js Teilweiser Download großer Mails
 src/content.js       Body-Aufbereitung: HTML→Text, Zitate, seitenweise Ausgabe
 src/compose.js       Antwortempfänger, Betreff, Zitat, MIME-Erzeugung
 src/attachments.js   Anhänge als Text/Bild bzw. Ablage
+src/office.js        Text aus DOCX, XLSX, PPTX, ODT, ODS, ODP (mit fflate)
+src/ical.js          Zusammenfassung von Kalenderdateien und Einladungen
+src/thread.js        Konversationen aus Message-ID/References rekonstruieren
 src/tools/           Tool-Definitionen (Postfach, Senden/Entwürfe), Annotationen
 scripts/smoke.mjs    Ende-zu-Ende-Test gegen die laufende Bridge
 test/                Unit-Tests (node:test)
@@ -303,7 +310,8 @@ This project is a fork of **[tamnys/proton-mail-mcp-server](https://github.com/t
 - **HTML mail is readable.** Previously, HTML-only messages (about half of a typical mailbox) came back with an empty body. HTML is now converted to text; images, styles and tracking URLs are dropped. Newsletters whose text part consists only of URLs are also rendered from their HTML.
 - **Long messages are paginated** (`offset`/`maxChars`) instead of flooding the agent's context.
 - **Less re-fetching:** A cache keeps parsed messages in memory for ten minutes, and large messages above 5 MB are loaded only partially (headers and text, attachments one by one). Both can be turned off (see step 4).
-- **Attachments can be opened:** PDFs as text, images directly, text files and attached messages rendered. Everything else is saved locally.
+- **Attachments can be opened:** PDFs, Word, Excel, PowerPoint and OpenDocument as text, calendar invitations as a summary (time with time zone and UTC, attendees with status), images directly, text files and attached messages rendered. Everything else is saved locally.
+- **Whole conversations:** `get_thread` fetches the whole history of a message across all folders, including your own replies from "Sent", with shortened bodies within one character budget.
 - **Drafts** appear in Proton under *Drafts* and can be edited there. An agent can prepare a reply and a human can review it before sending.
 - **Search results are sorted by date**, including in "All Mail".
 - **Source instead of a bundle:** modular code under `src/`, unit tests, and a smoke test against the running Bridge.
@@ -314,9 +322,10 @@ This project is a fork of **[tamnys/proton-mail-mcp-server](https://github.com/t
 |---|---|---|
 | `list_folders` | Folders with special-use flag and (unread) count | `read-only` |
 | `list_emails` | Newest messages in a folder, pageable via `offset` | `read-only` |
-| `search_emails` | Search by sender, recipient, subject, body, full text, date, unread, flagged; newest first | `read-only` |
+| `search_emails` | Search by sender, recipient, Cc, subject, body, full text, date, size, unread, flagged, answered, with/without attachments; newest first | `read-only` |
 | `read_email` | Headers, readable body, numbered attachment list. Options: `format`, `includeLinks`, `stripQuoted`, `offset`, `maxChars`, `markAsRead` (not allowed in `read-only`) | `read-only` |
-| `get_attachment` | Open an attachment by index, or save it with `save: true` | `read-only` |
+| `get_thread` | Whole conversation of a message across all folders, oldest first, with bodies without quotes within one character budget (`includeBodies`, `maxChars`) | `read-only` |
+| `get_attachment` | Open an attachment by index (PDF, Office and OpenDocument as text, calendars summarized, `raw: true` for the raw text) or save it with `save: true` | `read-only` |
 | `list_drafts` | List drafts | `read-only` |
 | `move_email`, `mark_email` | Move, mark read/unread, flag | `drafts` |
 | `delete_email` | Move to Trash (from `drafts`); delete permanently when already in Trash only in `full` | `drafts` / `full` |
@@ -337,9 +346,9 @@ UIDs are only valid within their folder. A message found by `search_emails` in "
 
 | Mode | Tools | Purpose |
 |---|---|---|
-| `read-only` | 6: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_attachment`, `list_drafts` | Nothing changes in the mailbox, not even the "read" flag. For audits and shared machines. |
-| `drafts` (**default**) | 12: as `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | The agent prepares, you send in Proton Mail. No sending, no permanent deletion from Trash; drafts can still be deleted (`delete_draft`) and are replaced by `update_draft`. |
-| `full` | 15: all, additionally `send_email`, `reply_to_email`, `send_draft` | Sending and permanent deletion. Only for agents you trust, ideally with a client confirmation before every send. |
+| `read-only` | 7: `list_folders`, `list_emails`, `search_emails`, `read_email`, `get_thread`, `get_attachment`, `list_drafts` | Nothing changes in the mailbox, not even the "read" flag. For audits and shared machines. |
+| `drafts` (**default**) | 13: as `read-only` plus `mark_email`, `move_email`, `delete_email`, `create_draft`, `update_draft`, `delete_draft` | The agent prepares, you send in Proton Mail. No sending, no permanent deletion from Trash; drafts can still be deleted (`delete_draft`) and are replaced by `update_draft`. |
+| `full` | 16: all, additionally `send_email`, `reply_to_email`, `send_draft` | Sending and permanent deletion. Only for agents you trust, ideally with a client confirmation before every send. |
 
 An invalid value aborts startup with an error message that names the valid values.
 
@@ -425,6 +434,8 @@ Optional settings:
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` | Largest image (1 MB) that `get_attachment` shows directly; larger ones are saved. `5242880` restores the former 5 MB limit |
 
 **Note on the image limit:** Images up to 5 MB used to come back directly, now only up to 1 MB. `get_attachment` saves larger images and reports the path. With `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` the old limit applies again.
+
+**Note on calendar files:** For `.ics` files, `get_attachment` used to return only the raw text. Now a summary of each event comes first. If you only need the raw text, call `get_attachment` with `raw: true`. Word, Excel and PowerPoint files as well as OpenDocument files now come back as text instead of being saved; `save: true` still saves them.
 
 #### 5. Test the connection
 
@@ -541,6 +552,9 @@ src/partial-fetch.js Partial download of large messages
 src/content.js       Body rendering: HTML→text, quotes, pagination
 src/compose.js       Reply recipients, subject, quote, MIME generation
 src/attachments.js   Attachments as text/image or saved to disk
+src/office.js        Text from DOCX, XLSX, PPTX, ODT, ODS, ODP (with fflate)
+src/ical.js          Summary of calendar files and invitations
+src/thread.js        Rebuild conversations from Message-ID/References
 src/tools/           Tool definitions (mailbox, sending/drafts), annotations
 scripts/smoke.mjs    End-to-end test against the running Bridge
 test/                Unit tests (node:test)

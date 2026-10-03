@@ -6,7 +6,7 @@
 
 ## Deutsch
 
-Stand: 2026-10-02
+Stand: 2026-10-03
 
 ### Umgesetzt
 
@@ -18,27 +18,27 @@ Stand: 2026-10-02
 | Postfach | `move_email`, `mark_email`, `delete_email` (Papierkorb, dort endgültig) | `mailbox-management` |
 | Senden | `send_email`, `reply_to_email` mit Reply-To, Threading und Zitat | `mail-sending` |
 | Entwürfe | `create_draft` (auch als Antwort), `list_drafts`, `update_draft` (erst anlegen, dann löschen), `send_draft`, `delete_draft` | `drafts` |
-| Sicherheit | Betriebsmodi `read-only` / `drafts` (Standard) / `full` über `PROTON_MCP_MODE` (Tools werden je Modus registriert, endgültiges Löschen nur in `full`, `markAsRead` in `read-only` abgelehnt); Anhänge nur aus erlaubten Verzeichnissen (`PROTON_MCP_ATTACHMENT_ROOTS`, Symlinks aufgelöst, versteckte Pfade immer abgelehnt); Titel und MCP-Annotationen an allen Tools; Server-Anweisung zu nicht vertrauenswürdigen Mailinhalten. **Ändert das Standardverhalten:** Senden nur noch mit `PROTON_MCP_MODE=full` | `harden-agent-safety` (Change, noch nicht archiviert) |
-| Weniger erneutes Laden | Cache geparster Mails im Speicher (Schlüssel Ordner + UIDVALIDITY + UID, 64 MB, 10 min, Flags immer frisch, Invalidierung bei Verschieben/Löschen/Entwurfsänderung); teilweiser Download von Mails über 5 MB in `read_email` und `get_attachment` (Gerüst von mailparser geparst, Gegenprobe der Anhangsliste, Rückfall auf vollen Download); Bild-Limit für `get_attachment` konfigurierbar, Standard 1 MB (früher 5 MB). Vier neue Variablen `PROTON_MCP_CACHE_MAX_BYTES`, `PROTON_MCP_CACHE_TTL_MS`, `PROTON_MCP_PARTIAL_FETCH_BYTES`, `PROTON_MCP_MAX_INLINE_IMAGE_BYTES`. Live gegen die Bridge gemessen (106 von 106 Nachrichten identisch). **Ändert das Standardverhalten:** Bilder über 1 MB werden gespeichert statt direkt gezeigt | `reduce-message-refetch` (Change, noch nicht archiviert) |
-| Projektgrundlagen | OpenSpec eingerichtet, Baseline-Specs des Ist-Stands (6 Capabilities, 31 Requirements), `feature-documentation/` (DE+EN), diese Datei | – |
+| Sicherheit | Betriebsmodi `read-only` / `drafts` (Standard) / `full` über `PROTON_MCP_MODE` (Tools werden je Modus registriert, endgültiges Löschen nur in `full`, `markAsRead` in `read-only` abgelehnt); Anhänge nur aus erlaubten Verzeichnissen (`PROTON_MCP_ATTACHMENT_ROOTS`, Symlinks aufgelöst, versteckte Pfade immer abgelehnt); Titel und MCP-Annotationen an allen Tools; Server-Anweisung zu nicht vertrauenswürdigen Mailinhalten. **Ändert das Standardverhalten:** Senden nur noch mit `PROTON_MCP_MODE=full` | `agent-safety` (Change `harden-agent-safety`, archiviert am 2026-10-02) |
+| Weniger erneutes Laden | Cache geparster Mails im Speicher (Schlüssel Ordner + UIDVALIDITY + UID, 64 MB, 10 min, Flags immer frisch, Invalidierung bei Verschieben/Löschen/Entwurfsänderung); teilweiser Download von Mails über 5 MB in `read_email` und `get_attachment` (Gerüst von mailparser geparst, Gegenprobe der Anhangsliste, Rückfall auf vollen Download); Bild-Limit für `get_attachment` konfigurierbar, Standard 1 MB (früher 5 MB). Vier neue Variablen `PROTON_MCP_CACHE_MAX_BYTES`, `PROTON_MCP_CACHE_TTL_MS`, `PROTON_MCP_PARTIAL_FETCH_BYTES`, `PROTON_MCP_MAX_INLINE_IMAGE_BYTES`. Live gegen die Bridge gemessen (106 von 106 Nachrichten identisch). **Ändert das Standardverhalten:** Bilder über 1 MB werden gespeichert statt direkt gezeigt | `mail-reading`, `attachments` (Change `reduce-message-refetch`, archiviert am 2026-10-03) |
+| Lese-Tools | Neues Tool `get_thread`: ganze Konversation über alle Ordner, aus Header-Suche in „All Mail“ rekonstruiert, mit Bodies ohne Zitat in einem Zeichenbudget; doppelte Kopien von Proton zusammengefasst; live 2,6 bis 5,6 s pro Thread. `search_emails` mit `cc`, `larger`, `smaller`, `answered`, `hasAttachments`. `get_attachment` liest DOCX, XLSX, PPTX, ODT, ODS, ODP als Text (neue Abhängigkeit `fflate`, Schutz vor ZIP-Bomben) und fasst Kalenderdateien zusammen (`raw: true` für den Rohtext). **Ändert das Standardverhalten:** `.ics` kommt mit Zusammenfassung vor dem Rohtext; Office-Dateien kommen als Text statt gespeichert | `conversation-threads` (neu), `mail-reading`, `attachments`, `agent-safety` (Change `add-reading-tools`, noch nicht archiviert) |
+| Projektgrundlagen | OpenSpec eingerichtet, Baseline-Specs des Ist-Stands, `feature-documentation/` (DE+EN), diese Datei | – |
 
 ### In Arbeit
 
-Derzeit nichts. Alle unten genannten Changes sind spezifiziert und bereit für `/opsx:apply`. `harden-agent-safety` und `reduce-message-refetch` sind umgesetzt und warten auf die Archivierung (`/opsx:archive`).
+`add-reading-tools` ist umgesetzt (11 von 11 Tasks, `npm test` und `npm run build` grün, Smoke-Test gegen die Bridge erfolgreich) und wartet auf die Archivierung (`/opsx:archive`).
 
 ### Ausstehend (OpenSpec-Changes unter `openspec/changes/`)
 
 Empfohlene Reihenfolge:
 
-1. **`add-reading-tools`** – `get_thread`, zusätzliche Suchkriterien (`cc`, Größe, beantwortet, Anhänge), Text aus Office-/ODF-Dateien, Zusammenfassung von Kalendereinladungen.
-2. **`add-mailbox-write-tools`** – `forward_email` und Weiterleitungs-Entwürfe, Sammeloperationen mit `uids`, Proton-Labels (`label_email`), `create_folder`. Setzt `harden-agent-safety` voraus (bereits umgesetzt).
-3. **`improve-robustness-and-locale`** – Sprache und Zeitzone der Zitatzeile, Ordner-Cache pro Verbindung, Sortierung von `list_emails` dokumentiert, Version aus `package.json`, Handler-Tests mit IMAP-Fake, CI. Unabhängig von den anderen.
+1. **`add-mailbox-write-tools`** – `forward_email` und Weiterleitungs-Entwürfe, Sammeloperationen mit `uids`, Proton-Labels (`label_email`), `create_folder`. Setzt `harden-agent-safety` voraus (archiviert).
+2. **`improve-robustness-and-locale`** – Sprache und Zeitzone der Zitatzeile, Ordner-Cache pro Verbindung, Sortierung von `list_emails` dokumentiert, Version aus `package.json`, Handler-Tests mit IMAP-Fake, CI. Unabhängig von den anderen.
 
 ---
 
 ## English
 
-As of: 2026-10-02
+As of: 2026-10-03
 
 ### Done
 
@@ -50,18 +50,18 @@ As of: 2026-10-02
 | Mailbox | `move_email`, `mark_email`, `delete_email` (to Trash, permanent there) | `mailbox-management` |
 | Sending | `send_email`, `reply_to_email` with Reply-To, threading and quote | `mail-sending` |
 | Drafts | `create_draft` (also as reply), `list_drafts`, `update_draft` (append first, then delete), `send_draft`, `delete_draft` | `drafts` |
-| Safety | Operating modes `read-only` / `drafts` (default) / `full` via `PROTON_MCP_MODE` (tools registered per mode, permanent deletion only in `full`, `markAsRead` refused in `read-only`); attachments only from allowed directories (`PROTON_MCP_ATTACHMENT_ROOTS`, symlinks resolved, hidden paths always refused); titles and MCP annotations on all tools; server instruction about untrusted mail content. **Changes the default behavior:** sending only with `PROTON_MCP_MODE=full` | `harden-agent-safety` (change, not yet archived) |
-| Less re-fetching | Cache of parsed messages in memory (key folder + UIDVALIDITY + UID, 64 MB, 10 min, flags always fresh, invalidation on move/delete/draft change); partial download of messages above 5 MB in `read_email` and `get_attachment` (skeleton parsed by mailparser, cross-check of the attachment list, fallback to full download); configurable image limit for `get_attachment`, default 1 MB (previously 5 MB). Four new variables `PROTON_MCP_CACHE_MAX_BYTES`, `PROTON_MCP_CACHE_TTL_MS`, `PROTON_MCP_PARTIAL_FETCH_BYTES`, `PROTON_MCP_MAX_INLINE_IMAGE_BYTES`. Measured live against the Bridge (106 of 106 messages identical). **Changes the default behavior:** images above 1 MB are saved instead of shown directly | `reduce-message-refetch` (change, not yet archived) |
-| Project foundations | OpenSpec set up, baseline specs of the current state (6 capabilities, 31 requirements), `feature-documentation/` (DE+EN), this file | – |
+| Safety | Operating modes `read-only` / `drafts` (default) / `full` via `PROTON_MCP_MODE` (tools registered per mode, permanent deletion only in `full`, `markAsRead` refused in `read-only`); attachments only from allowed directories (`PROTON_MCP_ATTACHMENT_ROOTS`, symlinks resolved, hidden paths always refused); titles and MCP annotations on all tools; server instruction about untrusted mail content. **Changes the default behavior:** sending only with `PROTON_MCP_MODE=full` | `agent-safety` (change `harden-agent-safety`, archived on 2026-10-02) |
+| Less re-fetching | Cache of parsed messages in memory (key folder + UIDVALIDITY + UID, 64 MB, 10 min, flags always fresh, invalidation on move/delete/draft change); partial download of messages above 5 MB in `read_email` and `get_attachment` (skeleton parsed by mailparser, cross-check of the attachment list, fallback to full download); configurable image limit for `get_attachment`, default 1 MB (previously 5 MB). Four new variables `PROTON_MCP_CACHE_MAX_BYTES`, `PROTON_MCP_CACHE_TTL_MS`, `PROTON_MCP_PARTIAL_FETCH_BYTES`, `PROTON_MCP_MAX_INLINE_IMAGE_BYTES`. Measured live against the Bridge (106 of 106 messages identical). **Changes the default behavior:** images above 1 MB are saved instead of shown directly | `mail-reading`, `attachments` (change `reduce-message-refetch`, archived on 2026-10-03) |
+| Reading tools | New tool `get_thread`: whole conversation across all folders, rebuilt from header searches in "All Mail", with bodies without quotes within one character budget; Proton's duplicate copies merged; 2.6 to 5.6 s per thread live. `search_emails` with `cc`, `larger`, `smaller`, `answered`, `hasAttachments`. `get_attachment` reads DOCX, XLSX, PPTX, ODT, ODS, ODP as text (new dependency `fflate`, ZIP bomb protection) and summarizes calendar files (`raw: true` for the raw text). **Changes the default behavior:** `.ics` comes with a summary before the raw text; Office files come back as text instead of being saved | `conversation-threads` (new), `mail-reading`, `attachments`, `agent-safety` (change `add-reading-tools`, not yet archived) |
+| Project foundations | OpenSpec set up, baseline specs of the current state, `feature-documentation/` (DE+EN), this file | – |
 
 ### In progress
 
-Nothing at the moment. All changes listed below are specified and ready for `/opsx:apply`. `harden-agent-safety` and `reduce-message-refetch` are implemented and await archiving (`/opsx:archive`).
+`add-reading-tools` is implemented (11 of 11 tasks, `npm test` and `npm run build` green, smoke test against the Bridge successful) and awaits archiving (`/opsx:archive`).
 
 ### Pending (OpenSpec changes under `openspec/changes/`)
 
 Recommended order:
 
-1. **`add-reading-tools`** – `get_thread`, additional search criteria (`cc`, size, answered, attachments), text from Office/ODF files, summary of calendar invitations.
-2. **`add-mailbox-write-tools`** – `forward_email` and forward drafts, bulk operations with `uids`, Proton labels (`label_email`), `create_folder`. Requires `harden-agent-safety` (already implemented).
-3. **`improve-robustness-and-locale`** – Language and time zone of the quote line, folder cache per connection, documented `list_emails` ordering, version from `package.json`, handler tests with an IMAP fake, CI. Independent of the others.
+1. **`add-mailbox-write-tools`** – `forward_email` and forward drafts, bulk operations with `uids`, Proton labels (`label_email`), `create_folder`. Requires `harden-agent-safety` (archived).
+2. **`improve-robustness-and-locale`** – Language and time zone of the quote line, folder cache per connection, documented `list_emails` ordering, version from `package.json`, handler tests with an IMAP fake, CI. Independent of the others.
