@@ -1,0 +1,12 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Apple Inc.//macOS//EN
+BEGIN:VEVENT
+UID:allday@example.com
+DTSTART;VALUE=DATE:20261224
+DTEND;VALUE=DATE:20261227
+SUMMARY:Betriebsferien
+DESCRIPTION:Ein sehr langer Text der über mehrere Zeilen umbrochen wird und daher 
+ gefaltet ist.
+END:VEVENT
+END:VCALENDAR

@@ -3,6 +3,8 @@ import { join, extname, basename } from "node:path";
 import { simpleParser } from "mailparser";
 import { CONFIG } from "./config.js";
 import { extractBody, formatAddresses, formatSize, htmlToText, normalizeText, paginate, describeAttachments } from "./content.js";
+import { extractOfficeText, officeKind, officeLabel, OfficeError } from "./office.js";
+import { summarizeCalendar } from "./ical.js";
 
 const INLINE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 const TEXT_TYPES = /^(text\/|application\/(json|xml|csv|x-csv|yaml|x-yaml|javascript|ics)|.*\+xml$)/i;
@@ -44,6 +46,12 @@ async function extractPdfText(buffer) {
   return { totalPages, text: normalizeText(text) };
 }
 
+const CALENDAR_TYPES = new Set(["text/calendar", "application/ics"]);
+
+function isCalendar(type, name) {
+  return CALENDAR_TYPES.has(type) || extname(name).toLowerCase() === ".ics";
+}
+
 function isText(attachment) {
   return TEXT_TYPES.test(attachment.contentType || "") || TEXT_EXTENSIONS.has(extname(attachment.filename || "").toLowerCase());
 }
@@ -56,7 +64,8 @@ function pagedText(header, text, offset, maxChars) {
 }
 
 // Converts an attachment into MCP content blocks. Falls back to saving it to disk.
-export async function attachmentToContent(attachment, { uid, index, offset = 0, maxChars = 20000, save = false, maxInlineImageBytes = CONFIG.maxInlineImageBytes, directory = CONFIG.attachmentDir }) {
+// `raw` only affects calendar files: the iCalendar text without the summary.
+export async function attachmentToContent(attachment, { uid, index, offset = 0, maxChars = 20000, save = false, raw = false, maxInlineImageBytes = CONFIG.maxInlineImageBytes, directory = CONFIG.attachmentDir }) {
   const name = attachment.filename || "(unnamed)";
   const type = (attachment.contentType || "application/octet-stream").toLowerCase();
   const header = `Attachment [${index}] ${name} (${type}, ${formatSize(attachment.size)}) from UID ${uid}`;
@@ -91,6 +100,28 @@ export async function attachmentToContent(attachment, { uid, index, offset = 0, 
     }
     const path = await saveAttachment(attachment, uid, directory);
     return [{ type: "text", text: `${header}\nNo extractable text (scanned or protected PDF). Saved to: ${path}` }];
+  }
+
+  if (isCalendar(type, name)) {
+    const source = attachment.content.toString("utf-8");
+    const text = raw ? source : `${summarizeCalendar(source)}\n\n--- Raw iCalendar ---\n${source}`;
+    return [{ type: "text", text: pagedText(`${header}\n${raw ? "Raw iCalendar" : "Calendar summary followed by the raw iCalendar text (raw: true for the raw text only)"}`, text, offset, maxChars) }];
+  }
+
+  const office = officeKind(type, name);
+  if (office === "legacy") {
+    const path = await saveAttachment(attachment, uid, directory);
+    return [{ type: "text", text: `${header}\nLegacy binary Office format (.doc/.xls/.ppt) – its text cannot be read. Saved to: ${path}` }];
+  }
+  if (office) {
+    try {
+      const text = extractOfficeText(attachment.content, office);
+      return [{ type: "text", text: pagedText(`${header}\n${officeLabel(office)} as text`, text, offset, maxChars) }];
+    } catch (error) {
+      if (!(error instanceof OfficeError)) throw error;
+      const path = await saveAttachment(attachment, uid, directory);
+      return [{ type: "text", text: `${header}\nThis ${officeLabel(office)} ${error.message}, so its text cannot be read. Saved to: ${path}` }];
+    }
   }
 
   if (type === "message/rfc822" || extname(name).toLowerCase() === ".eml") {
