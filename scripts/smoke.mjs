@@ -22,11 +22,22 @@ console.log("instructions:", client.getInstructions());
 const { tools } = await client.listTools();
 console.log("tools:", tools.map((t) => t.name).join(", "));
 
-await call("list_folders");
+const folders = (await call("list_folders")).json();
 const inbox = (await call("list_emails", { limit: 5 })).json();
 const newest = inbox.messages[0];
 await call("read_email", { uid: newest.uid, maxChars: 1500 });
 await call("search_emails", { folder: "All Mail", text: "Rechnung", limit: 3 });
+await call("search_emails", { folder: "INBOX", answered: false, hasAttachments: true, limit: 3 });
+
+// A conversation: the newest own reply in Sent pulls in what it answers.
+const sent = folders.find((f) => f.specialUse === "\\Sent")?.path;
+if (sent) {
+  const latestSent = (await call("list_emails", { folder: sent, limit: 1 })).json().messages[0];
+  if (latestSent) {
+    const thread = (await call("get_thread", { uid: latestSent.uid, folder: sent, maxChars: 3000 })).json();
+    console.log(`thread: ${thread.count} messages, truncated=${thread.truncated}, foldersChecked=${thread.foldersChecked.join(", ")}`);
+  }
+}
 
 if (withDrafts) {
   const self = process.env.SMOKE_SELF;

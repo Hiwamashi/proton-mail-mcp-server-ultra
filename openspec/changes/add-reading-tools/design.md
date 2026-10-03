@@ -36,6 +36,14 @@ A ZIP bomb guard limits total uncompressed size (50 MB) and entries. Alternative
 ### iCalendar parser
 Own minimal parser: line unfolding, parameters, `VEVENT`/`VTIMEZONE`, value unescaping. Times are shown as in the file with their TZID, plus UTC for floating-free values. Alternative: `node-ical` – rejected (pulls `moment-timezone`, large).
 
+### Spike result (2026-10-03, Proton Bridge, "All Mail" with 31 504 messages)
+- `UID SEARCH HEADER Message-ID`, `HEADER References` and `HEADER In-Reply-To` all work in "All Mail". Five own replies from Sent were checked: each found itself and its parent, and the fetched header of every hit carried the searched ID. A nonexistent ID returned no hit. → No subject fallback needed.
+- The search is a substring match (an ID without angle brackets also matches), so hits are verified locally against the fetched headers.
+- Cost is dominated by the folder scan, not by the number of criteria: a single criterion took 1.6–2.9 s, an OR batch of 1 / 10 / 40 IDs × 3 criteria 1.6 / 1.7 / 2.3 s. → One OR batch per round (chunks of 40 IDs); a typical thread (ancestors, replies, one empty confirming round) costs about three rounds ≈ 6–7 s.
+- Folder membership: `HEADER Message-ID` OR batch in INBOX (88 messages) 22 ms, Sent (27) 2 ms, Archive (27 717) 1.9 s. → Decision on the open question: membership is checked in the start folder and in the special-use folders INBOX, Sent, Drafts, Archive, Trash and Spam, but only in folders with at most 5000 messages; the result names the folders checked, so a missing folder is not mistaken for "not there".
+
+- Found during the smoke test: "All Mail" holds some messages twice with the same Message-ID (e.g. a received copy and a copy to a second own address). Such copies become one thread entry with `duplicateUids` listing the other "All Mail" UIDs; the 100-message limit and the body budget count each message once.
+
 ## Risks / Trade-offs
 
 - [Bridge does not support HEADER search] → Spike task first; subject-based fallback.
@@ -45,4 +53,4 @@ Own minimal parser: line unfolding, parameters, `VEVENT`/`VTIMEZONE`, value unes
 
 ## Open Questions
 
-- Whether folder membership per thread message is worth the extra searches – decide after the spike based on measured timings; the field is optional in the spec.
+- ~~Whether folder membership per thread message is worth the extra searches~~ – decided after the spike, see "Spike result".

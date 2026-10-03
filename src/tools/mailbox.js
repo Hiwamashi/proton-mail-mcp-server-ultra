@@ -3,6 +3,7 @@ import { withImapClient, withMailbox, loadMessage, loadAttachment, getSpecialFol
 import { messageCache } from "../message-cache.js";
 import { extractBody, stripQuoted, paginate, formatAddresses, describeAttachments, formatSize, formatDate } from "../content.js";
 import { attachmentToContent } from "../attachments.js";
+import { getThread } from "../thread.js";
 import { CONFIG, MODES } from "../config.js";
 import {
   DRAFT_MODES,
@@ -14,7 +15,7 @@ import {
   MARK_AS_READ_REFUSAL,
   PERMANENT_DELETE_REFUSAL,
 } from "../modes.js";
-import { defineTool, text, summarize, SUMMARY_FETCH } from "./util.js";
+import { defineTool, text, summarize, hasAttachments, SUMMARY_FETCH } from "./util.js";
 
 const folderArg = (fallback = "INBOX") =>
   z.string().default(fallback).describe(`Folder path as returned by list_folders (default: ${fallback}). UIDs are only valid within their folder.`);
@@ -31,6 +32,62 @@ function parseDate(value, name) {
 
 // Searches with more matches than this are sorted by UID instead of date.
 const MAX_SORT_CANDIDATES = 3000;
+
+// Maps search_emails arguments to imapflow search criteria. hasAttachments has no IMAP equivalent
+// and is applied in searchMessages.
+export function searchCriteria({ from, to, cc, subject, body, text: anyText, since, before, unseen, flagged, larger, smaller, answered }) {
+  const criteria = {};
+  if (from) criteria.from = from;
+  if (to) criteria.to = to;
+  if (cc) criteria.cc = cc;
+  if (subject) criteria.subject = subject;
+  if (body) criteria.body = body;
+  if (anyText) criteria.text = anyText;
+  if (since) criteria.since = parseDate(since, "since");
+  if (before) criteria.before = parseDate(before, "before");
+  if (unseen) criteria.seen = false;
+  if (flagged) criteria.flagged = true;
+  // imapflow drops 0 and would send a bare SEARCH; LARGER 0 is no restriction anyway.
+  if (larger > 0) criteria.larger = larger;
+  if (smaller > 0) criteria.smaller = smaller;
+  if (answered !== undefined) criteria.answered = answered;
+  if (Object.keys(criteria).length === 0) criteria.all = true;
+  return criteria;
+}
+
+// Runs search_emails in the selected folder: IMAP search, then sorting by internal date (UIDs are not
+// chronological, especially in "All Mail"). With hasAttachments the candidates' BODYSTRUCTURE is
+// fetched in the same step and filtered with the definition used for message summaries, so
+// totalMatches and paging only count messages that pass.
+export async function searchMessages(client, { folder, hasAttachments: wantAttachments, limit = 20, offset = 0, ...args }) {
+  const uids = (await client.search(searchCriteria(args), { uid: true })) || [];
+  if (uids.length === 0) return `No emails in "${folder}" matched the search criteria.`;
+
+  const capped = uids.length > MAX_SORT_CANDIDATES;
+  const candidates = capped ? uids.slice(-MAX_SORT_CANDIDATES) : uids;
+  const query = { uid: true, internalDate: true, ...(wantAttachments !== undefined ? { bodyStructure: true } : {}) };
+  const dated = [];
+  for await (const msg of client.fetch(candidates.join(","), query, { uid: true })) {
+    if (wantAttachments !== undefined && hasAttachments(msg.bodyStructure) !== wantAttachments) continue;
+    dated.push({ uid: msg.uid, time: msg.internalDate ? new Date(msg.internalDate).getTime() : 0 });
+  }
+  if (dated.length === 0) return `No emails in "${folder}" matched the search criteria.`;
+  dated.sort((a, b) => b.time - a.time);
+  const totalMatches = wantAttachments === undefined ? uids.length : dated.length;
+  const note = !capped
+    ? null
+    : wantAttachments === undefined
+      ? `Only the ${MAX_SORT_CANDIDATES} highest UIDs were sorted – narrow the search.`
+      : `Only the ${MAX_SORT_CANDIDATES} highest of ${uids.length} UIDs were checked for attachments and sorted – narrow the search.`;
+  const pageUids = dated.slice(offset, offset + limit).map((d) => d.uid);
+  if (pageUids.length === 0) return { folder, totalMatches, ...(note ? { note } : {}), offset, showing: 0, messages: [] };
+
+  const byUid = new Map();
+  for await (const msg of client.fetch(pageUids.join(","), SUMMARY_FETCH, { uid: true })) byUid.set(msg.uid, summarize(msg));
+  const messages = pageUids.map((uid) => byUid.get(uid)).filter(Boolean);
+  const nextOffset = offset + messages.length < dated.length ? offset + messages.length : null;
+  return { folder, totalMatches, ...(note ? { note } : {}), offset, showing: messages.length, nextOffset, messages };
+}
 
 export function renderEmail({ uid, folder, parsed, flags, body, source, page, quotedRemoved }) {
   const attachments = describeAttachments(parsed.attachments);
@@ -130,51 +187,19 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
         before: z.string().optional().describe("Before this date (YYYY-MM-DD)"),
         unseen: z.boolean().optional().describe("Only unread emails"),
         flagged: z.boolean().optional().describe("Only flagged/starred emails"),
+        cc: z.string().optional().describe("Cc address or name contains"),
+        larger: z.number().int().min(1).optional().describe("Only emails larger than this many bytes"),
+        smaller: z.number().int().min(1).optional().describe("Only emails smaller than this many bytes"),
+        answered: z.boolean().optional().describe("true: only emails you replied to; false: only emails not replied to"),
+        hasAttachments: z
+          .boolean()
+          .optional()
+          .describe("true: only emails with at least one attachment (inline images do not count); false: only emails without"),
         limit: z.number().int().min(1).max(100).default(20).describe("Max results (default 20, max 100)"),
         offset: z.number().int().min(0).default(0).describe("Skip this many results (for paging)"),
       },
     },
-    async ({ folder, from, to, subject, body, text: anyText, since, before, unseen, flagged, limit, offset }) =>
-      withMailbox(folder, async (client) => {
-        const criteria = {};
-        if (from) criteria.from = from;
-        if (to) criteria.to = to;
-        if (subject) criteria.subject = subject;
-        if (body) criteria.body = body;
-        if (anyText) criteria.text = anyText;
-        if (since) criteria.since = parseDate(since, "since");
-        if (before) criteria.before = parseDate(before, "before");
-        if (unseen) criteria.seen = false;
-        if (flagged) criteria.flagged = true;
-        if (Object.keys(criteria).length === 0) criteria.all = true;
-
-        const uids = (await client.search(criteria, { uid: true })) || [];
-        if (uids.length === 0) return text(`No emails in "${folder}" matched the search criteria.`);
-
-        // UIDs are not chronological (especially in "All Mail"), so sort by internal date first.
-        const candidates = uids.length > MAX_SORT_CANDIDATES ? uids.slice(-MAX_SORT_CANDIDATES) : uids;
-        const dated = [];
-        for await (const msg of client.fetch(candidates.join(","), { uid: true, internalDate: true }, { uid: true })) {
-          dated.push({ uid: msg.uid, time: msg.internalDate ? new Date(msg.internalDate).getTime() : 0 });
-        }
-        dated.sort((a, b) => b.time - a.time);
-        const pageUids = dated.slice(offset, offset + limit).map((d) => d.uid);
-        if (pageUids.length === 0) return text({ folder, totalMatches: uids.length, offset, showing: 0, messages: [] });
-
-        const byUid = new Map();
-        for await (const msg of client.fetch(pageUids.join(","), SUMMARY_FETCH, { uid: true })) byUid.set(msg.uid, summarize(msg));
-        const messages = pageUids.map((uid) => byUid.get(uid)).filter(Boolean);
-        const nextOffset = offset + messages.length < dated.length ? offset + messages.length : null;
-        return text({
-          folder,
-          totalMatches: uids.length,
-          ...(uids.length > MAX_SORT_CANDIDATES ? { note: `Only the ${MAX_SORT_CANDIDATES} highest UIDs were sorted – narrow the search.` } : {}),
-          offset,
-          showing: messages.length,
-          nextOffset,
-          messages,
-        });
-      })
+    async (args) => withMailbox(args.folder, async (client) => text(await searchMessages(client, args)))
   );
 
   define(
@@ -215,11 +240,27 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
   );
 
   define(
+    "get_thread",
+    {
+      modes: MODES,
+      description:
+        "Get the whole conversation of an email across all folders (what it replies to and every reply, including your own sent replies), oldest first. Returned UIDs are valid in \"All Mail\". Bodies have the quoted history removed and share one character budget; the oldest are shortened first. Takes a few seconds on large mailboxes.",
+      inputSchema: {
+        uid: z.number().int().describe("UID of one email of the conversation"),
+        folder: folderArg(),
+        includeBodies: z.boolean().default(true).describe("Include each message's body without quoted history (default true); false returns summaries only"),
+        maxChars: z.number().int().min(500).max(100000).default(20000).describe("Total body characters for the whole thread (default 20000)"),
+      },
+    },
+    async ({ uid, folder, includeBodies, maxChars }) => withImapClient(async (client) => text(await getThread(client, { uid, folder, includeBodies, maxChars })))
+  );
+
+  define(
     "get_attachment",
     {
       modes: MODES,
       description:
-        "Open an attachment of an email by its index from read_email. PDFs and text files are returned as text, images are shown directly, attached emails are rendered. Other files (Office documents, archives, ...) are saved to the local attachment folder and the path is returned.",
+        "Open an attachment of an email by its index from read_email. PDFs, Word/Excel/PowerPoint (.docx, .xlsx, .pptx) and OpenDocument (.odt, .ods, .odp) files and text files are returned as text, calendar invitations (.ics) as a summary of each event followed by the raw iCalendar text, images are shown directly, attached emails are rendered. Other files (legacy .doc/.xls/.ppt, archives, encrypted documents, ...) are saved to the local attachment folder and the path is returned.",
       inputSchema: {
         uid: z.number().int().describe("UID of the email"),
         folder: folderArg(),
@@ -227,9 +268,10 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
         save: z.boolean().default(false).describe("Save the file to the local attachment folder instead of showing it"),
         offset: z.number().int().min(0).default(0).describe("Start position for long text content"),
         maxChars: z.number().int().min(500).max(100000).default(20000).describe("Max characters of text content (default 20000)"),
+        raw: z.boolean().default(false).describe("Calendar files only: return the raw iCalendar text without the summary"),
       },
     },
-    async ({ uid, folder, index, save, offset, maxChars }) => {
+    async ({ uid, folder, index, save, offset, maxChars, raw }) => {
       // The part is downloaded while the folder is locked; converting it needs no connection.
       const attachment = await withMailbox(folder, async (client) => {
         const loaded = await loadMessage(client, folder, uid, { allowPartial: true });
@@ -240,7 +282,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
         }
         return found;
       });
-      return { content: await attachmentToContent(attachment, { uid, index, offset, maxChars, save }) };
+      return { content: await attachmentToContent(attachment, { uid, index, offset, maxChars, save, raw }) };
     }
   );
 

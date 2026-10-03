@@ -4,7 +4,7 @@ import { registerMailboxTools } from "../src/tools/mailbox.js";
 import { registerComposeTools } from "../src/tools/compose.js";
 import { serverInstructions } from "../src/modes.js";
 
-const READ_ONLY = ["list_folders", "list_emails", "search_emails", "read_email", "get_attachment", "list_drafts"];
+const READ_ONLY = ["list_folders", "list_emails", "search_emails", "read_email", "get_attachment", "get_thread", "list_drafts"];
 const DESTRUCTIVE = ["delete_email", "delete_draft", "update_draft"];
 const IDEMPOTENT = [...READ_ONLY, "mark_email"];
 const OPEN_WORLD = ["send_email", "reply_to_email", "send_draft"];
@@ -14,8 +14,8 @@ const server = { registerTool: (name, config) => tools.set(name, config) };
 registerMailboxTools(server, { mode: "full" });
 registerComposeTools(server, { mode: "full" });
 
-test("all 15 tools are registered in full mode", () => {
-  assert.equal(tools.size, 15);
+test("all 16 tools are registered in full mode", () => {
+  assert.equal(tools.size, 16);
 });
 
 for (const [name, config] of tools) {

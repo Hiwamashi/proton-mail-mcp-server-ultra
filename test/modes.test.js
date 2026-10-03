@@ -12,7 +12,7 @@ import {
   MARK_AS_READ_REFUSAL,
 } from "../src/modes.js";
 
-const READ_ONLY = ["list_folders", "list_emails", "search_emails", "read_email", "get_attachment", "list_drafts"];
+const READ_ONLY = ["list_folders", "list_emails", "search_emails", "read_email", "get_attachment", "get_thread", "list_drafts"];
 const DRAFTS = [...READ_ONLY, "mark_email", "move_email", "delete_email", "create_draft", "update_draft", "delete_draft"];
 const FULL = [...DRAFTS, "send_email", "reply_to_email", "send_draft"];
 const EXPECTED = { "read-only": READ_ONLY, drafts: DRAFTS, full: FULL };

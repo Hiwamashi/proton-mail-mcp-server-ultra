@@ -19,6 +19,7 @@ export const TOOL_META = {
   search_emails: meta("Search emails", { readOnly: true }),
   read_email: meta("Read email", { readOnly: true }),
   get_attachment: meta("Read attachment", { readOnly: true }),
+  get_thread: meta("Get conversation", { readOnly: true }),
   list_drafts: meta("List drafts", { readOnly: true }),
   mark_email: meta("Mark email", { idempotent: true }),
   move_email: meta("Move email"),
