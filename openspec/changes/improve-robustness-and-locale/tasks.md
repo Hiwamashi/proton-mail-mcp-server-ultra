@@ -4,7 +4,7 @@
 
 - [x] 1.1 Add `setImapClientFactory` and a fake IMAP client under `test/helpers/`; verify with a first test that `withImapClient` uses the fake
 - [x] 1.2 Add handler tests: read retried once after a connection error, write not retried, non-connection error not retried, `update_draft` appends before deleting and warns on failed delete, `send_draft` warns on failed cleanup; verify all pass with `npm test`
-- [ ] 1.3 Add `.github/workflows/ci.yml` (Node 20/22, test, build); verify the workflow passes on a push
+- [x] 1.3 Add `.github/workflows/ci.yml` (Node 20/22, test, build); verify the workflow passes on a push
 
 ## 2. Locale and time zone
 

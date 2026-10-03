@@ -27,7 +27,7 @@ Stand: 2026-10-03
 
 ### In Arbeit
 
-`improve-robustness-and-locale` ist bis auf Task 1.3 umgesetzt: Der CI-Workflow liegt bereit, muss aber noch nach einem Push auf GitHub einmal grün laufen. Danach Archivierung mit `/opsx:archive`.
+`improve-robustness-and-locale` ist umgesetzt (12 von 12 Tasks). Der CI-Lauf nach dem Push am 2026-10-03 war auf Node 20 und 22 grün. Es fehlt nur noch die Archivierung (`/opsx:archive`).
 
 ### Ausstehend (OpenSpec-Changes unter `openspec/changes/`)
 
@@ -58,7 +58,7 @@ As of: 2026-10-03
 
 ### In progress
 
-`improve-robustness-and-locale` is implemented except for task 1.3: the CI workflow is in place but still has to run green once after a push to GitHub. Then archive with `/opsx:archive`.
+`improve-robustness-and-locale` is implemented (12 of 12 tasks). The CI run after the push on 2026-10-03 was green on Node 20 and 22. Only archiving is left (`/opsx:archive`).
 
 ### Pending (OpenSpec changes under `openspec/changes/`)
 
