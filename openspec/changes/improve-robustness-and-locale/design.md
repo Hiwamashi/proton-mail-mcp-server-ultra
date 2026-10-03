@@ -34,6 +34,15 @@ Move `specialFolderCache` onto the client object (`WeakMap<ImapFlow, Map>`), so 
 ### nodemailer upgrade
 Planned on 2026-10-03 after `add-reading-tools`: `npm audit` flags `nodemailer <= 10.0.5` (high; among others SMTP command injection via CRLF, header injection in List-* comments, addressparser DoS). The fix is only available in 10.x, i.e. four major versions above the pinned ^6.10.1; `mailparser` already pulls 10.0.13 as its own dependency. We use two surfaces: `createTransport` (SMTP to the Bridge with STARTTLS, self-signed cert) and `nodemailer/lib/mail-composer` (raw MIME for drafts). Approach: read the 7.x–10.x changelogs for these two surfaces first, upgrade, then compare the MIME of the existing compose tests and run `scripts/smoke.mjs --drafts` against the Bridge. Done here because the CI from this change catches regressions and the handler tests cover send and draft paths.
 
+Changelog review (2026-10-03, CHANGELOG of nodemailer 10.0.13, sections 7.0.0–10.0.0):
+
+| Version | Breaking change | Effect on us |
+|---|---|---|
+| 7.0.0 | SES transport rebuilt on SESv2, old SES SDK support removed | none, SES is not used |
+| 8.0.0 | Error code `NoAuth` renamed to `ENOAUTH` | none, error codes are not evaluated |
+| 9.0.0 | TLS certificates are validated when fetching remote content (attachment URLs, OAuth2, proxy) | none, attachments are local paths; SMTP keeps `tls.rejectUnauthorized: false` for the Bridge's self-signed certificate. 9.0.3 hardens the STARTTLS upgrade → check the handshake live with `transport.verify()` (connects, STARTTLS, AUTH, sends nothing) |
+| 10.0.0 | Node ≥ 20; rewritten in TypeScript with ESM/CJS builds and an `exports` map | `nodemailer/lib/mail-composer/index.js` is no longer exported; the import becomes `nodemailer/lib/mail-composer`. Its ESM build has `export default MailComposer`, and `compile()`, `build()` and `keepBcc` are unchanged |
+
 ## Risks / Trade-offs
 
 - [Fake drifts from imapflow behavior] → Keep the fake minimal, assert only on our own logic (retry counts, call order), and keep `scripts/smoke.mjs` as the real-Bridge check.

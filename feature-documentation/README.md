@@ -33,7 +33,7 @@ Die Dokumentation folgt dem Code exakt – es werden keine geplanten oder mögli
 | **mailbox/bulk-operations.md** | `uids` für Verschieben, Markieren, Löschen: bis 500 Mails in einem Aufruf, `processed`/`notFound` |
 | **labels/label-email.md** | Proton-Labels setzen und entfernen (COPY/EXPUNGE im Label-Ordner) |
 | **labels/create-folder.md** | Ordner oder Label anlegen |
-| **compose/reply-logic.md** | Antwort-Logik: Empfänger bestimmen, Betreff, Zitat, Zeitzone |
+| **compose/reply-logic.md** | Antwort-Logik: Empfänger bestimmen, Betreff, Zitat in fünf Sprachen, Zeitzone |
 | **compose/send-email.md** | Neue Mail verfassen und sofort versenden |
 | **compose/reply-to-email.md** | Auf Mail antworten und sofort versenden |
 | **compose/forward-email.md** | Weiterleiten: `forward_email` und Weiterleitungs-Entwürfe mit Kopfblock und Original-Anhängen |
@@ -44,6 +44,7 @@ Die Dokumentation folgt dem Code exakt – es werden keine geplanten oder mögli
 | **compose/delete-draft.md** | Entwurf löschen |
 | **safety/operating-modes.md** | Betriebsmodi `read-only`/`drafts`/`full`: welche Tools wann existieren, Tool-Annotationen, Server-Anweisungen |
 | **safety/attachment-roots.md** | Erlaubte Verzeichnisse für lokale Anhänge, Pfadprüfung (Symlinks, versteckte Pfade) |
+| **testing.md** | Testnähte, Fake-IMAP-Client, Handler-Tests, Smoke-Test, CI, Server-Version |
 
 ## Wichtige Konzepte
 
@@ -94,7 +95,7 @@ The documentation tracks the code exactly – no planned or possible features ar
 | **mailbox/bulk-operations.md** | `uids` for move, mark, delete: up to 500 messages in one call, `processed`/`notFound` |
 | **labels/label-email.md** | Add and remove Proton labels (COPY/EXPUNGE in the label folder) |
 | **labels/create-folder.md** | Create a folder or label |
-| **compose/reply-logic.md** | Reply logic: determine recipients, subject, quote, timezone |
+| **compose/reply-logic.md** | Reply logic: determine recipients, subject, quote in five languages, timezone |
 | **compose/send-email.md** | Compose new message and send immediately |
 | **compose/reply-to-email.md** | Reply to message and send immediately |
 | **compose/forward-email.md** | Forwarding: `forward_email` and forward drafts with header block and original attachments |
@@ -105,6 +106,7 @@ The documentation tracks the code exactly – no planned or possible features ar
 | **compose/delete-draft.md** | Permanently delete draft |
 | **safety/operating-modes.md** | Operating modes `read-only`/`drafts`/`full`: which tools exist when, tool annotations, server instructions |
 | **safety/attachment-roots.md** | Allowed directories for local attachments, path check (symlinks, hidden paths) |
+| **testing.md** | Test seams, fake IMAP client, handler tests, smoke test, CI, server version |
 
 ## Key Concepts
 

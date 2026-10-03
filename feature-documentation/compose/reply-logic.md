@@ -60,17 +60,23 @@ Kombiniert `original.references` und `original.messageId` zu einem String.
 
 Erzeugt die Zitat-Zuordnung (Wer schrieb wann).
 
-**Zeitzone:** `Europe/Berlin` – hartcodiert
+**Sprache und Zeitzone:** über `PROTON_MCP_LOCALE` (`de` Standard, `en`, `fr`, `es`, `it`) und `PROTON_MCP_TIMEZONE` (IANA-Name, Standard `Europe/Berlin`). Die Tabelle steht in `src/locale.js`; das Datum nutzt das mittlere Datums- und kurze Zeitformat der Sprache. Ungültige Werte brechen den Start ab (`assertLocale()`).
 
-**Format:**
+**Format je Sprache:**
 
-```
-Am 15.01.2024, 14:30 schrieb Max Mustermann <max@example.com>:
-```
+| Sprache | Zitatzeile |
+|---|---|
+| `de` | `Am 06.10.2026, 09:15 schrieb Max Mustermann <max@example.com>:` |
+| `en` | `On Oct 6, 2026, 9:15 AM, Max Mustermann <max@example.com> wrote:` |
+| `fr` | `Le 6 oct. 2026, 09:15, Max Mustermann <max@example.com> a écrit :` |
+| `es` | `El 6 oct 2026, 9:15, Max Mustermann <max@example.com> escribió:` |
+| `it` | `Il 6 ott 2026, 09:15, Max Mustermann <max@example.com> ha scritto:` |
 
-Falls kein Datum: `Max Mustermann <max@example.com> schrieb:`.
+Falls kein Datum: `Max Mustermann <max@example.com> schrieb:` (bzw. `wrote:` …).
 
-Falls kein Sender: `unbekannt schrieb:`.
+Falls kein Sender: `unbekannt schrieb:` (`unknown wrote:`, `inconnu a écrit :`, `desconocido escribió:`, `sconosciuto ha scritto:`).
+
+Dieselben Einstellungen gelten für den Kopfblock beim Weiterleiten (siehe `forward-email.md`). `stripQuoted()` erkennt die Zitatzeilen und Weiterleitungs-Trennzeilen **aller** Sprachen, unabhängig von der Einstellung. Vorher wurde die spanische Zeile nicht erkannt (ein `\b` hinter „escribió“ greift in JavaScript nicht); ein Round-Trip-Test je Sprache sichert das jetzt ab.
 
 ### `quoteText(originalBody, attribution)`
 
@@ -181,17 +187,23 @@ Combines `original.references` and `original.messageId` into a string.
 
 Creates the quote attribution (who wrote when).
 
-**Timezone:** `Europe/Berlin` – hardcoded
+**Language and time zone:** via `PROTON_MCP_LOCALE` (`de` default, `en`, `fr`, `es`, `it`) and `PROTON_MCP_TIMEZONE` (IANA name, default `Europe/Berlin`). The table is in `src/locale.js`; the date uses the language's medium date and short time format. Invalid values stop the startup (`assertLocale()`).
 
-**Format:**
+**Format per language:**
 
-```
-Am 15.01.2024, 14:30 schrieb Max Mustermann <max@example.com>:
-```
+| Language | Attribution line |
+|---|---|
+| `de` | `Am 06.10.2026, 09:15 schrieb Max Mustermann <max@example.com>:` |
+| `en` | `On Oct 6, 2026, 9:15 AM, Max Mustermann <max@example.com> wrote:` |
+| `fr` | `Le 6 oct. 2026, 09:15, Max Mustermann <max@example.com> a écrit :` |
+| `es` | `El 6 oct 2026, 9:15, Max Mustermann <max@example.com> escribió:` |
+| `it` | `Il 6 ott 2026, 09:15, Max Mustermann <max@example.com> ha scritto:` |
 
-If no date: `Max Mustermann <max@example.com> schrieb:`.
+If no date: `Max Mustermann <max@example.com> schrieb:` (or `wrote:` …).
 
-If no sender: `unbekannt schrieb:`.
+If no sender: `unbekannt schrieb:` (`unknown wrote:`, `inconnu a écrit :`, `desconocido escribió:`, `sconosciuto ha scritto:`).
+
+The same settings apply to the header block when forwarding (see `forward-email.md`). `stripQuoted()` recognizes the attribution lines and forward separator lines of **all** languages, regardless of the setting. Previously the Spanish line was not recognized (a `\b` after "escribió" does not match in JavaScript); a round-trip test per language now covers this.
 
 ### `quoteText(originalBody, attribution)`
 

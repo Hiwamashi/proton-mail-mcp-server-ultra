@@ -152,6 +152,8 @@ Optionale Einstellungen:
 | `PROTON_MCP_CACHE_TTL_MS` | `600000` | Lebensdauer eines Cache-Eintrags in Millisekunden (10 min) |
 | `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` | Bei Nachrichten, die größer als 5 MB sind, laden `read_email` und `get_attachment` nur Header und Text, Anhänge einzeln; ein sehr hoher Wert (z. B. `999999999999`) schaltet das aus |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` | Größtes Bild (1 MB), das `get_attachment` direkt zeigt; größere werden gespeichert. `5242880` stellt das frühere Limit von 5 MB wieder her |
+| `PROTON_MCP_LOCALE` | `de` | Sprache der Zitatzeile in Antworten und des Kopfblocks beim Weiterleiten: `de`, `en`, `fr`, `es`, `it` |
+| `PROTON_MCP_TIMEZONE` | `Europe/Berlin` | Zeitzone (IANA-Name) für das Datum in Zitatzeile und Kopfblock |
 
 **Hinweis zum Bild-Limit:** Früher kamen Bilder bis 5 MB direkt zurück, jetzt nur noch bis 1 MB. Größere Bilder speichert `get_attachment` und meldet den Pfad. Mit `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` gilt wieder das alte Limit.
 
@@ -272,12 +274,15 @@ src/partial-fetch.js Teilweiser Download großer Mails
 src/content.js       Body-Aufbereitung: HTML→Text, Zitate, seitenweise Ausgabe
 src/compose.js       Antwortempfänger, Betreff, Zitat, MIME-Erzeugung
 src/attachments.js   Anhänge als Text/Bild bzw. Ablage
+src/locale.js        Sprachen und Zeitzone für Zitatzeile und Weiterleitungs-Kopfblock, Muster zum Erkennen von Zitaten
+src/version.js       Gemeldete Server-Version aus package.json
 src/office.js        Text aus DOCX, XLSX, PPTX, ODT, ODS, ODP (mit fflate)
 src/ical.js          Zusammenfassung von Kalenderdateien und Einladungen
 src/thread.js        Konversationen aus Message-ID/References rekonstruieren
 src/tools/           Tool-Definitionen (Postfach, Senden/Entwürfe/Weiterleiten, Labels/Ordner), Annotationen
 scripts/smoke.mjs    Ende-zu-Ende-Test gegen die laufende Bridge
-test/                Unit-Tests (node:test)
+test/                Unit- und Handler-Tests (node:test) mit Fake-IMAP-Client, siehe feature-documentation/testing.md
+.github/workflows/   CI: Tests und Build auf Node 20 und 22
 ```
 
 ### Hinweis zum KI-Einsatz
@@ -440,6 +445,8 @@ Optional settings:
 | `PROTON_MCP_CACHE_TTL_MS` | `600000` | Lifetime of a cache entry in milliseconds (10 min) |
 | `PROTON_MCP_PARTIAL_FETCH_BYTES` | `5242880` | For messages larger than 5 MB, `read_email` and `get_attachment` load only headers and text, attachments one by one; a very high value (e.g. `999999999999`) turns this off |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | `1048576` | Largest image (1 MB) that `get_attachment` shows directly; larger ones are saved. `5242880` restores the former 5 MB limit |
+| `PROTON_MCP_LOCALE` | `de` | Language of the attribution line in replies and of the header block when forwarding: `de`, `en`, `fr`, `es`, `it` |
+| `PROTON_MCP_TIMEZONE` | `Europe/Berlin` | Time zone (IANA name) for the date in the attribution line and header block |
 
 **Note on the image limit:** Images up to 5 MB used to come back directly, now only up to 1 MB. `get_attachment` saves larger images and reports the path. With `PROTON_MCP_MAX_INLINE_IMAGE_BYTES=5242880` the old limit applies again.
 
@@ -560,12 +567,15 @@ src/partial-fetch.js Partial download of large messages
 src/content.js       Body rendering: HTML→text, quotes, pagination
 src/compose.js       Reply recipients, subject, quote, MIME generation
 src/attachments.js   Attachments as text/image or saved to disk
+src/locale.js        Languages and time zone for the attribution line and forward header, quote detection patterns
+src/version.js       Reported server version from package.json
 src/office.js        Text from DOCX, XLSX, PPTX, ODT, ODS, ODP (with fflate)
 src/ical.js          Summary of calendar files and invitations
 src/thread.js        Rebuild conversations from Message-ID/References
 src/tools/           Tool definitions (mailbox, sending/drafts/forwarding, labels/folders), annotations
 scripts/smoke.mjs    End-to-end test against the running Bridge
-test/                Unit tests (node:test)
+test/                Unit and handler tests (node:test) with a fake IMAP client, see feature-documentation/testing.md
+.github/workflows/   CI: tests and build on Node 20 and 22
 ```
 
 ### Note on AI use

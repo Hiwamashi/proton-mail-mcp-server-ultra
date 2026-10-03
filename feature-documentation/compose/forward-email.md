@@ -43,7 +43,7 @@ Leitet eine Mail weiter: Betreff mit `Fwd:`, eine optionale Einleitung, darunter
 
 - **Betreff:** `forwardSubject()` setzt `Fwd: ` davor, außer der Betreff beginnt schon mit `Fwd:`, `Fw:` oder `WG:` (Groß-/Kleinschreibung egal). `Re:` zählt nicht, aus `Re: X` wird `Fwd: Re: X`. Ein eigenes, nicht leeres `subject` hat Vorrang.
 - **Text:** Einleitung, Leerzeile, Kopfblock, Leerzeile, lesbarer Body des Originals (`extractBody`).
-- **Kopfblock** (Sprache wie das Antwortzitat, derzeit Deutsch):
+- **Kopfblock** (Sprache und Zeitzone wie das Antwortzitat: `PROTON_MCP_LOCALE`, `PROTON_MCP_TIMEZONE`; hier mit `de`):
   ```
   ---------- Weitergeleitete Nachricht ----------
   Von: Jürgen Müller <juergen@example.com>
@@ -52,7 +52,7 @@ Leitet eine Mail weiter: Betreff mit `Fwd:`, eine optionale Einleitung, darunter
   An: Anna Beispiel <anna@example.com>
   Cc: team@example.com
   ```
-  Eine leere Cc-Zeile fehlt. Das Datum steht in der Zeitzone Europe/Berlin. `stripQuoted()` erkennt die Trennzeile, `read_email` mit `stripQuoted: true` zeigt also nur die Einleitung.
+  Eine leere Cc-Zeile fehlt. Die Bezeichnungen folgen der Sprache, z. B. `en`: `---------- Forwarded message ---------`, `From`, `Date`, `Subject`, `To`, `Cc`. `stripQuoted()` erkennt die Trennzeile, `read_email` mit `stripQuoted: true` zeigt also nur die Einleitung.
 - **HTML:** Es entsteht, wenn die Einleitung als HTML kommt oder das Original HTML hat. Aufbau: Einleitung (bei Bedarf aus dem Text erzeugt), dann `<div class="protonmail_forward">` mit dem Kopfblock und dem **Original-HTML**. `cid:`-Verweise bleiben erhalten.
 - **Anhänge:** `carryAttachments(original)` übernimmt alle Anhänge, auch eingebettete Bilder mit ihrer `cid`. Signaturteile (PKCS#7, PGP) fallen weg, weil sie zur neuen Nachricht nicht mehr passen. Mit `includeAttachments: false` gibt es keine Anhänge. Eingebettete Bilder im Original-HTML werden dann nicht angezeigt.
 - **Threading:** Es wird kein `In-Reply-To` und kein `References` gesetzt. Eine Weiterleitung beginnt eine neue Unterhaltung.
@@ -132,7 +132,7 @@ For `create_draft`, `body` is now only required when the draft is not a forward.
 
 - **Subject:** `forwardSubject()` prefixes `Fwd: `, unless the subject already starts with `Fwd:`, `Fw:` or `WG:` (case-insensitive). `Re:` does not count; `Re: X` becomes `Fwd: Re: X`. An explicit, non-empty `subject` wins.
 - **Text:** introduction, blank line, header block, blank line, readable body of the original (`extractBody`).
-- **Header block** (same language as the reply quote, currently German):
+- **Header block** (same language and time zone as the reply quote: `PROTON_MCP_LOCALE`, `PROTON_MCP_TIMEZONE`; shown with `de`):
   ```
   ---------- Weitergeleitete Nachricht ----------
   Von: Jürgen Müller <juergen@example.com>
@@ -141,7 +141,7 @@ For `create_draft`, `body` is now only required when the draft is not a forward.
   An: Anna Beispiel <anna@example.com>
   Cc: team@example.com
   ```
-  An empty Cc line is left out. The date is in the Europe/Berlin time zone. `stripQuoted()` recognizes the separator line, so `read_email` with `stripQuoted: true` shows only the introduction.
+  An empty Cc line is left out. The labels follow the language, e.g. `en`: `---------- Forwarded message ---------`, `From`, `Date`, `Subject`, `To`, `Cc`. `stripQuoted()` recognizes the separator line, so `read_email` with `stripQuoted: true` shows only the introduction.
 - **HTML:** It is created when the introduction comes as HTML or the original has HTML. Structure: introduction (generated from the text if needed), then `<div class="protonmail_forward">` with the header block and the **original HTML**. `cid:` references are kept.
 - **Attachments:** `carryAttachments(original)` carries over all attachments, including embedded images with their `cid`. Signature parts (PKCS#7, PGP) are dropped because they no longer match the new message. With `includeAttachments: false` there are no attachments. Embedded images in the original HTML are then not displayed.
 - **Threading:** No `In-Reply-To` and no `References` are set. A forward starts a new conversation.

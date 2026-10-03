@@ -10,7 +10,9 @@
 
 ## Zweck
 
-Zählt die neuesten Mails eines Ordners auf, neueste zuerst. Mit `offset` kann man blättern.
+Zählt die zuletzt in einen Ordner gekommenen Mails auf; jede Seite ist nach Datum sortiert, neueste zuerst. Mit `offset` kann man blättern.
+
+**Reihenfolge:** Maßgeblich ist die Ankunft im Ordner (Sequenznummern), nicht das Sendedatum. Eine alte Mail, die gerade in die INBOX verschoben wurde, steht auf der ersten Seite; in „All Mail“ wirkt die Reihenfolge dadurch gemischt. Für Datumsreihenfolge über einen ganzen Ordner gibt es `search_emails` (z. B. mit `since`). Die Tool-Beschreibung sagt das dem Agenten.
 
 ## Parameter
 
@@ -50,7 +52,7 @@ MCP-Text-Block mit Struktur:
 
 ## Besonderheiten
 
-- **Neuste zuerst:** Mails sind nach internem Datum sortiert, neuste oben
+- **Neuste zuerst je Seite:** Die Mails einer Seite sind nach Datum sortiert; welche Mails auf einer Seite landen, bestimmt die Ankunft im Ordner
 - **UIDs:** Eindeutig nur innerhalb dieses Ordners. Zum Lesen: `read_email` mit `folder` und `uid` aufrufen
 - **nextOffset:** Falls `null`, keine weiteren Mails vorhanden
 - **Pagination:** `offset: 20, limit: 20` zeigt Mails 20–39; `nextOffset: 40` für die nächsten Mails
@@ -85,7 +87,9 @@ Falls `offset ≥ total`: Das Tool gibt einfach `showing: 0, messages: []` zurü
 
 ## Purpose
 
-Lists the newest emails in a folder, newest first. Use `offset` to page through them.
+Lists the emails most recently added to a folder; each page is sorted by date, newest first. Use `offset` to page through them.
+
+**Order:** What counts is the arrival in the folder (sequence numbers), not the sent date. An old message just moved into INBOX appears on the first page; in "All Mail" the order therefore looks mixed. For date order across a whole folder use `search_emails` (e.g. with `since`). The tool description tells the agent so.
 
 ## Parameters
 
@@ -125,7 +129,7 @@ MCP text block with structure:
 
 ## Details
 
-- **Newest first:** Messages are sorted by internal date, newest on top
+- **Newest first per page:** The messages of a page are sorted by date; which messages land on a page is decided by arrival in the folder
 - **UIDs:** Unique only within this folder. To read: call `read_email` with `folder` and `uid`
 - **nextOffset:** If `null`, no more messages available
 - **Pagination:** `offset: 20, limit: 20` shows messages 20–39; `nextOffset: 40` for the next batch

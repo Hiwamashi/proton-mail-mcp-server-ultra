@@ -54,6 +54,8 @@ Kommentare (mit `#` am Anfang) und leere Zeilen werden ignoriert. Werte können 
 | `PROTON_MCP_CACHE_TTL_MS` | number | `600000` | Lebensdauer eines Cache-Eintrags in Millisekunden (10 min) |
 | `PROTON_MCP_PARTIAL_FETCH_BYTES` | number | `5242880` | Nachrichtengröße in Bytes (5 MB); nur Nachrichten, die größer sind, lädt `read_email`/`get_attachment` teilweise. Ein sehr hoher Wert (z. B. `999999999999`) schaltet das aus |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | number | `1048576` | Größtes Bild in Bytes (1 MB), das `get_attachment` direkt als Bild zurückgibt; größere werden gespeichert. `5242880` stellt das frühere Limit wieder her |
+| `PROTON_MCP_LOCALE` | string | `de` | Sprache der Zitatzeile in Antworten und des Kopfblocks beim Weiterleiten: `de`, `en`, `fr`, `es`, `it`. Ungültig: Start bricht mit Exit-Code 1 ab. Siehe `compose/reply-logic.md` |
+| `PROTON_MCP_TIMEZONE` | string | `Europe/Berlin` | Zeitzone (IANA-Name) für das Datum in Zitatzeile und Kopfblock. Ungültig: Start bricht mit Exit-Code 1 ab |
 
 Ungültige Zahlenwerte (keine ganze Zahl oder negativ) bei diesen vier Variablen ersetzt der Server durch den Standardwert und gibt auf stderr eine Warnzeile mit dem Variablennamen aus. `0` bleibt gültig.
 
@@ -91,7 +93,9 @@ Die Funktion `loadConfig()` erzeugt:
 
 Die Funktion `assertMode()` wird bei Server-Start zuerst aufgerufen und bricht den Prozess ab (Exit-Code 1), falls `PROTON_MCP_MODE` kein gültiger Wert ist (`Invalid PROTON_MCP_MODE "<wert>". Valid values: "read-only", "drafts", "full".`). Ein ungültiger Modus wirft beim Import nicht, damit Tests die Konfiguration laden können; er wird in `CONFIG.modeError` gehalten.
 
-`logStartupConfig()` schreibt danach Modus und erlaubte Anhang-Verzeichnisse nach stderr (`proton-mail-mcp: mode=...`, `proton-mail-mcp: attachment roots=...`).
+Danach prüft `assertLocale()` `PROTON_MCP_LOCALE` und `PROTON_MCP_TIMEZONE` und bricht bei ungültigen Werten ebenso ab, mit einer Meldung, die die Variable nennt (`Invalid PROTON_MCP_TIMEZONE "Mars/Olympus". Use an IANA time zone name such as "Europe/Berlin" or "America/New_York".`). Auch diese Fehler hält `CONFIG.localeErrors` bis zum Start.
+
+`logStartupConfig()` schreibt danach Modus, Sprache, Zeitzone und erlaubte Anhang-Verzeichnisse nach stderr (`proton-mail-mcp: mode=...`, `proton-mail-mcp: locale=... timezone=...`, `proton-mail-mcp: attachment roots=...`).
 
 Die Funktion `assertCredentials()` wird bei Server-Start aufgerufen und bricht den Prozess ab (Exit-Code 1), falls `PROTON_BRIDGE_USERNAME` oder `PROTON_BRIDGE_PASSWORD` fehlen:
 
@@ -157,6 +161,8 @@ Comments (starting with `#`) and blank lines are ignored. Values can be unquoted
 | `PROTON_MCP_CACHE_TTL_MS` | number | `600000` | Lifetime of a cache entry in milliseconds (10 min) |
 | `PROTON_MCP_PARTIAL_FETCH_BYTES` | number | `5242880` | Message size in bytes (5 MB); only messages larger than this are loaded partially by `read_email`/`get_attachment`. A very high value (e.g. `999999999999`) turns this off |
 | `PROTON_MCP_MAX_INLINE_IMAGE_BYTES` | number | `1048576` | Largest image in bytes (1 MB) that `get_attachment` returns directly as an image; larger ones are saved. `5242880` restores the former limit |
+| `PROTON_MCP_LOCALE` | string | `de` | Language of the attribution line in replies and of the header block when forwarding: `de`, `en`, `fr`, `es`, `it`. Invalid: startup aborts with exit code 1. See `compose/reply-logic.md` |
+| `PROTON_MCP_TIMEZONE` | string | `Europe/Berlin` | Time zone (IANA name) for the date in the attribution line and header block. Invalid: startup aborts with exit code 1 |
 
 Invalid numeric values (not an integer, or negative) for these four variables are replaced by the default, and one warning line naming the variable goes to stderr. `0` stays valid.
 
@@ -194,7 +200,9 @@ The function `loadConfig()` produces:
 
 The function `assertMode()` is called first on server startup and terminates the process (exit code 1) if `PROTON_MCP_MODE` is not a valid value (`Invalid PROTON_MCP_MODE "<value>". Valid values: "read-only", "drafts", "full".`). An invalid mode does not throw on import so tests can load the configuration; it is kept in `CONFIG.modeError`.
 
-`logStartupConfig()` then writes the mode and the allowed attachment directories to stderr (`proton-mail-mcp: mode=...`, `proton-mail-mcp: attachment roots=...`).
+Then `assertLocale()` checks `PROTON_MCP_LOCALE` and `PROTON_MCP_TIMEZONE` and likewise aborts on invalid values, with a message naming the variable (`Invalid PROTON_MCP_TIMEZONE "Mars/Olympus". Use an IANA time zone name such as "Europe/Berlin" or "America/New_York".`). These errors are also kept in `CONFIG.localeErrors` until startup.
+
+`logStartupConfig()` then writes the mode, language, time zone and the allowed attachment directories to stderr (`proton-mail-mcp: mode=...`, `proton-mail-mcp: locale=... timezone=...`, `proton-mail-mcp: attachment roots=...`).
 
 The function `assertCredentials()` is called on server startup and terminates the process (exit code 1) if `PROTON_BRIDGE_USERNAME` or `PROTON_BRIDGE_PASSWORD` are missing:
 
