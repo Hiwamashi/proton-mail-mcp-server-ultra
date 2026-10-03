@@ -20,15 +20,19 @@ Tools that list messages SHALL describe each message with `uid`, ISO `date`, `fr
 - **THEN** `from` reads `"Doe, John" <john@example.com>`
 
 ### Requirement: List newest emails
-`list_emails` SHALL return the newest messages of a folder (default `INBOX`), `limit` 1–100 (default 20), skipping `offset` newest messages, sorted newest first. The result SHALL include `folder`, `total`, `offset`, `showing`, `nextOffset` (or `null` when no older messages remain) and `messages`.
+`list_emails` SHALL return the messages most recently added to a folder (default `INBOX`), `limit` 1–100 (default 20), skipping `offset` most recently added messages, each page sorted by date newest first. The tool description SHALL state that the order follows arrival in the folder and that `search_emails` (for example with `since`) gives date order across the folder, which matters in "All Mail" and after moving old messages. The result SHALL include `folder`, `total`, `offset`, `showing`, `nextOffset` (or `null` when no older messages remain) and `messages`.
 
 #### Scenario: Paging back
 - **WHEN** `list_emails` is called with `offset` equal to the previous `nextOffset`
-- **THEN** the next older block of messages is returned
+- **THEN** the next block of earlier added messages is returned
 
 #### Scenario: Offset beyond folder size
 - **WHEN** `offset` is greater than or equal to the number of messages
 - **THEN** the result has `showing: 0` and an empty `messages` list
+
+#### Scenario: Old message moved into the inbox
+- **WHEN** a message from 2020 was just moved into INBOX
+- **THEN** it appears on the first page of `list_emails`
 
 ### Requirement: Search emails
 `search_emails` SHALL search one folder (default `INBOX`) combining all given criteria with AND: `from`, `to`, `subject`, `body`, `text` (headers or body), `since` (on or after), `before`, `unseen`, `flagged`. Dates SHALL be given as `YYYY-MM-DD`; any other format SHALL be rejected with an error naming the parameter. Without criteria all messages match. Results SHALL be sorted by internal date, newest first, and paged with `limit` (1–100, default 20) and `offset`; the result SHALL include `totalMatches` and `nextOffset`.
