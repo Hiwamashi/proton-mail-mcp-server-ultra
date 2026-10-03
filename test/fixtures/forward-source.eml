@@ -1,0 +1,54 @@
+From: =?UTF-8?Q?J=C3=BCrgen_M=C3=BCller?= <juergen@example.com>
+To: Anna Beispiel <anna@example.com>
+Cc: team@example.com
+Subject: Rechnung Oktober
+Date: Tue, 06 Oct 2026 09:15:00 +0200
+Message-ID: <fixture-forward@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/signed; protocol="application/pkcs7-signature"; micalg=sha-256; boundary="SIG"
+
+--SIG
+Content-Type: multipart/mixed; boundary="MIX"
+
+--MIX
+Content-Type: multipart/related; boundary="REL"
+
+--REL
+Content-Type: multipart/alternative; boundary="ALT"
+
+--ALT
+Content-Type: text/plain; charset=utf-8
+
+Anbei die Rechnung.
+
+--ALT
+Content-Type: text/html; charset=utf-8
+
+<p>Anbei die <b>Rechnung</b>.</p><img src="cid:logo@example.com">
+
+--ALT--
+--REL
+Content-Type: image/png; name="logo.png"
+Content-Transfer-Encoding: base64
+Content-ID: <logo@example.com>
+Content-Disposition: inline; filename="logo.png"
+
+iVBORw0KGgpmYWtlLWltYWdlLWJ5dGVz
+
+--REL--
+--MIX
+Content-Type: application/pdf; name="Rechnung.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="Rechnung.pdf"
+
+JVBERi0xLjQKZmFrZSBwZGYgZm9yIGZvcndhcmQgdGVzdAolJUVPRgo=
+
+--MIX--
+--SIG
+Content-Type: application/pkcs7-signature; name="smime.p7s"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="smime.p7s"
+
+ZmFrZS1zaWduYXR1cmU=
+
+--SIG--

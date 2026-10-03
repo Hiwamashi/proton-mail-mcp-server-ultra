@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { withImapClient, withMailbox, loadMessage, loadAttachment, getSpecialFolder } from "../connections.js";
+import { withImapClient, withMailbox, loadMessage, loadAttachment, getSpecialFolder, NotFoundError } from "../connections.js";
 import { messageCache } from "../message-cache.js";
 import { extractBody, stripQuoted, paginate, formatAddresses, describeAttachments, formatSize, formatDate } from "../content.js";
 import { attachmentToContent } from "../attachments.js";
@@ -118,6 +118,83 @@ export function renderEmail({ uid, folder, parsed, flags, body, source, page, qu
   const more = page.nextOffset !== null ? ` – call read_email again with offset=${page.nextOffset} for the rest` : "";
   lines.push(`Body: ${bodyInfo}${more}`, "---", body);
   return lines.join("\n");
+}
+
+// ---- Single and bulk operations (move_email, mark_email, delete_email) ----
+
+const MAX_BULK_UIDS = 500;
+export const uidArg = z.number().int().optional().describe("UID of the email (use uids for several)");
+export const uidsArg = z
+  .array(z.number().int())
+  .min(1)
+  .max(MAX_BULK_UIDS)
+  .optional()
+  .describe(`UIDs of several emails in the same folder (up to ${MAX_BULK_UIDS}), instead of uid`);
+
+// Exactly one of uid/uids. Returns the UID list and whether the bulk result shape is wanted.
+export function resolveUids({ uid, uids }) {
+  if ((uid === undefined) === (uids === undefined)) throw new Error("Use exactly one of uid or uids.");
+  return { list: uids ? [...new Set(uids)] : [uid], bulk: uids !== undefined };
+}
+
+// Splits the requested UIDs of the selected folder into existing and missing ones with one UID SEARCH.
+// Fails when none exists, so a call never reports success without changing anything.
+export async function existingUids(client, folder, list) {
+  const found = new Set((await client.search({ uid: list }, { uid: true })) || []);
+  const processed = list.filter((u) => found.has(u));
+  const notFound = list.filter((u) => !found.has(u));
+  if (!processed.length) {
+    throw new NotFoundError(
+      list.length === 1
+        ? `No message with UID ${list[0]} in folder "${folder}". UIDs are per folder – check the folder name.`
+        : `None of the ${list.length} UIDs exist in folder "${folder}". UIDs are per folder – check the folder name.`
+    );
+  }
+  return { processed, notFound };
+}
+
+// One UID MOVE over all existing UIDs. Single-UID calls keep their previous result fields.
+export async function moveMessages(client, folder, destination, { list, bulk }) {
+  const { processed, notFound } = await existingUids(client, folder, list);
+  const result = await client.messageMove(processed.join(","), destination, { uid: true });
+  if (!result) throw new Error(`Could not move ${processed.length === 1 ? `UID ${processed[0]}` : `${processed.length} emails`} from "${folder}" to "${destination}".`);
+  for (const u of processed) messageCache.invalidate(folder, u);
+  const uidMap = {};
+  for (const u of processed) {
+    const target = result.uidMap?.get?.(u);
+    if (target !== undefined) uidMap[u] = target;
+  }
+  if (!bulk) return { success: true, uid: list[0], from: folder, to: destination, newUid: uidMap[list[0]] ?? null };
+  return { success: true, from: folder, to: destination, processed, notFound, uidMap };
+}
+
+export async function markMessages(client, folder, action, { list, bulk }) {
+  const { processed, notFound } = await existingUids(client, folder, list);
+  const flag = action === "read" || action === "unread" ? "\\Seen" : "\\Flagged";
+  if (action === "read" || action === "flag") await client.messageFlagsAdd(processed.join(","), [flag], { uid: true });
+  else await client.messageFlagsRemove(processed.join(","), [flag], { uid: true });
+  if (!bulk) return { success: true, uid: list[0], action };
+  return { success: true, action, processed, notFound };
+}
+
+// Moves to Trash, or deletes permanently when the folder is Trash – which is refused outside full
+// mode before anything is touched.
+export async function deleteMessages(client, folder, trash, { list, bulk }, mode) {
+  const inTrash = folder.toLowerCase() === trash.toLowerCase();
+  if (inTrash && !allowsPermanentDelete(mode)) throw new Error(PERMANENT_DELETE_REFUSAL);
+  const { processed, notFound } = await existingUids(client, folder, list);
+  if (inTrash) {
+    // imapflow reports a failed EXPUNGE as false instead of throwing.
+    const deleted = await client.messageDelete(processed.join(","), { uid: true });
+    if (!deleted) throw new Error(`Could not delete ${processed.length === 1 ? `UID ${processed[0]}` : `${processed.length} emails`} in "${folder}".`);
+  } else {
+    const result = await client.messageMove(processed.join(","), trash, { uid: true });
+    if (!result) throw new Error(`Could not move ${processed.length === 1 ? `UID ${processed[0]}` : `${processed.length} emails`} from "${folder}" to Trash.`);
+  }
+  for (const u of processed) messageCache.invalidate(folder, u);
+  const outcome = inTrash ? { deletedPermanently: true } : { movedTo: trash };
+  if (!bulk) return { success: true, uid: list[0], ...outcome };
+  return { success: true, ...outcome, processed, notFound };
 }
 
 export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
@@ -290,41 +367,36 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
     "move_email",
     {
       modes: DRAFT_MODES,
-      description: "Move an email to another folder (e.g. Archive, Spam, Folders/MyFolder).",
+      description: "Move one email (uid) or several emails of the same folder (uids, up to 500) to another folder (e.g. Archive, Spam, Folders/MyFolder).",
       inputSchema: {
-        uid: z.number().int().describe("UID of the email"),
+        uid: uidArg,
+        uids: uidsArg,
         sourceFolder: folderArg(),
         destinationFolder: z.string().describe("Target folder path as returned by list_folders"),
       },
     },
-    async ({ uid, sourceFolder, destinationFolder }) =>
-      withMailbox(sourceFolder, async (client) => {
-        const result = await client.messageMove(`${uid}`, destinationFolder, { uid: true });
-        if (!result) throw new Error(`Could not move UID ${uid} from "${sourceFolder}" – does it exist there?`);
-        messageCache.invalidate(sourceFolder, uid);
-        const newUid = result.uidMap?.get?.(uid) ?? null;
-        return text({ success: true, uid, from: sourceFolder, to: destinationFolder, newUid });
-      }, WRITE)
+    async ({ uid, uids, sourceFolder, destinationFolder }) => {
+      const selection = resolveUids({ uid, uids });
+      return withMailbox(sourceFolder, async (client) => text(await moveMessages(client, sourceFolder, destinationFolder, selection)), WRITE);
+    }
   );
 
   define(
     "mark_email",
     {
       modes: DRAFT_MODES,
-      description: "Mark an email as read/unread or flagged/unflagged (flagged = starred in Proton).",
+      description: "Mark one email (uid) or several emails of the same folder (uids, up to 500) as read/unread or flagged/unflagged (flagged = starred in Proton).",
       inputSchema: {
-        uid: z.number().int().describe("UID of the email"),
+        uid: uidArg,
+        uids: uidsArg,
         folder: folderArg(),
         action: z.enum(["read", "unread", "flag", "unflag"]).describe("Action to perform"),
       },
     },
-    async ({ uid, folder, action }) =>
-      withMailbox(folder, async (client) => {
-        const flag = action === "read" || action === "unread" ? "\\Seen" : "\\Flagged";
-        if (action === "read" || action === "flag") await client.messageFlagsAdd(`${uid}`, [flag], { uid: true });
-        else await client.messageFlagsRemove(`${uid}`, [flag], { uid: true });
-        return text({ success: true, uid, action });
-      })
+    async ({ uid, uids, folder, action }) => {
+      const selection = resolveUids({ uid, uids });
+      return withMailbox(folder, async (client) => text(await markMessages(client, folder, action, selection)));
+    }
   );
 
   define(
@@ -333,29 +405,22 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
       modes: DRAFT_MODES,
       description: deleteEmailDescription(mode),
       inputSchema: {
-        uid: z.number().int().describe("UID of the email"),
+        uid: uidArg,
+        uids: uidsArg,
         folder: folderArg(),
       },
     },
-    async ({ uid, folder }) =>
-      withImapClient(async (client) => {
+    async ({ uid, uids, folder }) => {
+      const selection = resolveUids({ uid, uids });
+      return withImapClient(async (client) => {
         const trash = await getSpecialFolder(client, "\\Trash", "Trash");
         const lock = await client.getMailboxLock(folder);
         try {
-          if (folder.toLowerCase() === trash.toLowerCase()) {
-            // Refused before messageDelete so the message stays untouched.
-            if (!allowsPermanentDelete(mode)) throw new Error(PERMANENT_DELETE_REFUSAL);
-            await client.messageDelete(`${uid}`, { uid: true });
-            messageCache.invalidate(folder, uid);
-            return text({ success: true, uid, deletedPermanently: true });
-          }
-          const result = await client.messageMove(`${uid}`, trash, { uid: true });
-          if (!result) throw new Error(`Could not move UID ${uid} from "${folder}" to Trash – does it exist there?`);
-          messageCache.invalidate(folder, uid);
-          return text({ success: true, uid, movedTo: trash });
+          return text(await deleteMessages(client, folder, trash, selection, mode));
         } finally {
           lock.release();
         }
-      }, WRITE)
+      }, WRITE);
+    }
   );
 }

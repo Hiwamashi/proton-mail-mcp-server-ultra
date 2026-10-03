@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { registerMailboxTools } from "../src/tools/mailbox.js";
 import { registerComposeTools } from "../src/tools/compose.js";
+import { registerLabelTools } from "../src/tools/labels.js";
 import { defineTool } from "../src/tools/util.js";
 import {
   toolAvailable,
@@ -13,8 +14,8 @@ import {
 } from "../src/modes.js";
 
 const READ_ONLY = ["list_folders", "list_emails", "search_emails", "read_email", "get_attachment", "get_thread", "list_drafts"];
-const DRAFTS = [...READ_ONLY, "mark_email", "move_email", "delete_email", "create_draft", "update_draft", "delete_draft"];
-const FULL = [...DRAFTS, "send_email", "reply_to_email", "send_draft"];
+const DRAFTS = [...READ_ONLY, "mark_email", "move_email", "delete_email", "create_draft", "update_draft", "delete_draft", "label_email", "create_folder"];
+const FULL = [...DRAFTS, "send_email", "reply_to_email", "send_draft", "forward_email"];
 const EXPECTED = { "read-only": READ_ONLY, drafts: DRAFTS, full: FULL };
 
 function register(mode) {
@@ -22,6 +23,7 @@ function register(mode) {
   const server = { registerTool: (name, config, handler) => tools.set(name, { config, handler }) };
   registerMailboxTools(server, { mode });
   registerComposeTools(server, { mode });
+  registerLabelTools(server, { mode });
   return tools;
 }
 

@@ -30,4 +30,7 @@ export const TOOL_META = {
   send_email: meta("Send email", { openWorld: true }),
   reply_to_email: meta("Reply to email", { openWorld: true }),
   send_draft: meta("Send draft", { openWorld: true }),
+  forward_email: meta("Forward email", { openWorld: true }),
+  label_email: meta("Label email", { idempotent: true }),
+  create_folder: meta("Create folder or label"),
 };

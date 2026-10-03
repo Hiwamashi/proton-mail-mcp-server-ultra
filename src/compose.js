@@ -67,6 +67,41 @@ export function quoteAttribution(original) {
   return when ? `Am ${when} schrieb ${who}:` : `${who} schrieb:`;
 }
 
+// Forwarding keeps an existing forward prefix (Fwd:, Fw:, WG:) instead of stacking another one.
+export function forwardSubject(subject) {
+  const s = (subject || "").trim();
+  return /^(fwd?|wg)\s*:/i.test(s) ? s : `Fwd: ${s}`;
+}
+
+const FORWARD_SEPARATOR = "---------- Weitergeleitete Nachricht ----------";
+
+function addressLine(field) {
+  return addressList(field)
+    .map((a) => (a.name ? `${a.name} <${a.address}>` : a.address))
+    .join(", ");
+}
+
+// Header lines of the forwarded original, in the language of the reply quote. Empty Cc is left out.
+function forwardHeaderLines(original) {
+  const lines = [
+    ["Von", addressLine(original.from)],
+    ["Datum", original.date ? dateFormatter.format(original.date) : ""],
+    ["Betreff", original.subject || ""],
+    ["An", addressLine(original.to)],
+    ["Cc", addressLine(original.cc)],
+  ];
+  return lines.filter(([label, value]) => value || label !== "Cc");
+}
+
+export function forwardHeaderText(original) {
+  return [FORWARD_SEPARATOR, ...forwardHeaderLines(original).map(([label, value]) => `${label}: ${value}`)].join("\n");
+}
+
+export function forwardHeaderHtml(original) {
+  const rows = forwardHeaderLines(original).map(([label, value]) => `<b>${label}:</b> ${escapeHtml(value)}<br>`);
+  return `${escapeHtml(FORWARD_SEPARATOR)}<br>\n${rows.join("\n")}`;
+}
+
 export function quoteText(originalBody, attribution) {
   const quoted = originalBody
     .split("\n")

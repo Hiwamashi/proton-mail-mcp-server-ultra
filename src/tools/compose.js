@@ -14,6 +14,9 @@ import {
   quoteText,
   quoteHtml,
   textToHtml,
+  forwardSubject,
+  forwardHeaderText,
+  forwardHeaderHtml,
   buildRawMessage,
   splitAddresses,
   assertIsDraft,
@@ -42,7 +45,7 @@ const SIGNATURE_TYPES = ["application/pkcs7-signature", "application/x-pkcs7-sig
 // Attachments of a parsed message in the shape nodemailer expects, for re-sending or re-saving.
 // `remove` holds indexes as numbered by read_email, so it is applied before anything else is filtered.
 // Signatures are dropped because they no longer match the rebuilt message.
-function carryAttachments(parsed, { remove = new Set(), dropInline = false } = {}) {
+export function carryAttachments(parsed, { remove = new Set(), dropInline = false } = {}) {
   return (parsed.attachments || [])
     .filter((a, index) => !remove.has(index))
     .filter((a) => !SIGNATURE_TYPES.includes(a.contentType))
@@ -61,11 +64,15 @@ async function loadOriginal(uid, folder) {
   return parsed;
 }
 
-// Builds nodemailer options for a new message or a reply.
+// Builds nodemailer options for a new message, a reply (`original`) or a forward (`forward`).
 // For replies, unset To/Cc/Subject are derived from the original and its body is quoted.
-async function composeOptions({ to, cc, bcc, subject, body, html, attachments, original, replyAll = false, quoteOriginal = true }) {
+// A forward puts the optional introduction above a header block and the original body; the HTML
+// version carries the original HTML, and the original attachments (inline images included,
+// signatures dropped) come along unless includeAttachments is false. No threading headers are set.
+export async function composeOptions({ to, cc, bcc, subject, body, html, attachments, original, forward, replyAll = false, quoteOriginal = true, includeAttachments = true }) {
   const options = { from: CONFIG.from, text: body };
   if (html) options.html = html;
+  let carried = [];
 
   if (original) {
     const derived = replyRecipients(original, { replyAll, selfAddresses: CONFIG.selfAddresses });
@@ -80,6 +87,19 @@ async function composeOptions({ to, cc, bcc, subject, body, html, attachments, o
       options.text = `${body}\n\n${quoteText(originalBody, attribution)}`;
       if (html) options.html = `${html}<br><br>${quoteHtml(original.html || "", originalBody, attribution)}`;
     }
+  } else if (forward) {
+    options.to = to;
+    options.cc = cc;
+    options.subject = subject?.trim() ? subject : forwardSubject(forward.subject);
+    const intro = body || "";
+    const { body: forwardedBody } = extractBody(forward);
+    options.text = [intro, forwardHeaderText(forward), forwardedBody].filter(Boolean).join("\n\n");
+    if (html || forward.html) {
+      const introHtml = html ?? (intro ? textToHtml(intro) : "");
+      const forwardedHtml = forward.html || textToHtml(forwardedBody);
+      options.html = `${introHtml ? `${introHtml}<br><br>` : ""}<div class="protonmail_forward">${forwardHeaderHtml(forward)}<br>${forwardedHtml}</div>`;
+    }
+    if (includeAttachments) carried = carryAttachments(forward);
   } else {
     options.to = to;
     options.cc = cc;
@@ -87,7 +107,7 @@ async function composeOptions({ to, cc, bcc, subject, body, html, attachments, o
   }
   if (bcc) options.bcc = bcc;
   const files = await fileAttachments(attachments);
-  if (files.length) options.attachments = files;
+  if (carried.length || files.length) options.attachments = [...carried, ...files];
   return options;
 }
 
@@ -218,15 +238,47 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
   );
 
   define(
+    "forward_email",
+    {
+      modes: FULL_ONLY,
+      description:
+        "Forward an email and send immediately: Fwd: subject, your optional introduction, a header block of the original and its body, plus the original attachments. To let the user review it first, use create_draft with forwardUid instead.",
+      inputSchema: {
+        uid: z.number().int().describe("UID of the email to forward"),
+        folder: z.string().default("INBOX").describe("Folder of the email to forward"),
+        to: z.string().describe("Recipients, comma-separated"),
+        cc: recipientsArg("CC"),
+        bcc: recipientsArg("BCC"),
+        body: z.string().optional().describe("Optional introduction above the forwarded message (plain text)"),
+        html: z.string().optional().describe("Optional HTML version of the introduction"),
+        includeAttachments: z.boolean().default(true).describe("Attach the original attachments (default true)"),
+      },
+    },
+    async ({ uid, folder, ...rest }) => {
+      const forward = await loadOriginal(uid, folder);
+      const options = await composeOptions({ ...rest, forward });
+      const info = await sendMail(options);
+      return text({
+        success: true,
+        messageId: info.messageId,
+        to: displayRecipients(options.to),
+        cc: displayRecipients(options.cc),
+        subject: options.subject,
+        attachments: (options.attachments || []).map((a) => a.filename),
+      });
+    }
+  );
+
+  define(
     "create_draft",
     {
       modes: DRAFT_MODES,
       description:
-        "Save an email as a draft in Proton Mail's Drafts folder without sending it. For a reply draft pass replyToUid (and replyFolder): recipients, subject, threading and quote are filled in automatically; explicit to/cc/subject override them.",
+        "Save an email as a draft in Proton Mail's Drafts folder without sending it. For a reply draft pass replyToUid (and replyFolder): recipients, subject, threading and quote are filled in automatically; explicit to/cc/subject override them. For a forward draft pass forwardUid (and forwardFolder): Fwd: subject, header block, original body and attachments are added; to may stay empty.",
       inputSchema: {
         to: z.string().optional().describe("Recipients, comma-separated (optional for reply drafts)"),
         subject: z.string().optional().describe("Subject line (optional for reply drafts)"),
-        body: z.string().describe("Plain text body (for replies without the quote)"),
+        body: z.string().optional().describe("Plain text body (for replies without the quote, for forwards the introduction)"),
         html: z.string().optional().describe("Optional HTML version of the body"),
         cc: recipientsArg("CC"),
         bcc: recipientsArg("BCC"),
@@ -235,11 +287,20 @@ export function registerComposeTools(server, { mode = CONFIG.mode } = {}) {
         replyFolder: z.string().default("INBOX").describe("Folder of the email in replyToUid"),
         replyAll: z.boolean().default(false).describe("For reply drafts: include all original recipients"),
         quoteOriginal: z.boolean().default(true).describe("For reply drafts: append the quoted original"),
+        forwardUid: z.number().int().optional().describe("UID of the email this draft forwards"),
+        forwardFolder: z.string().default("INBOX").describe("Folder of the email in forwardUid"),
+        includeAttachments: z.boolean().default(true).describe("For forward drafts: attach the original attachments"),
       },
     },
-    async ({ replyToUid, replyFolder, ...rest }) => {
+    async ({ replyToUid, replyFolder, forwardUid, forwardFolder, ...rest }) => {
+      // Decided before the mailbox is touched.
+      if (replyToUid !== undefined && forwardUid !== undefined) {
+        throw new Error("Use either replyToUid or forwardUid, not both: a draft is a reply or a forward.");
+      }
+      if (rest.body === undefined && forwardUid === undefined) throw new Error("body is required unless the draft forwards an email (forwardUid).");
       const original = replyToUid !== undefined ? await loadOriginal(replyToUid, replyFolder) : null;
-      const options = await composeOptions({ ...rest, original });
+      const forward = forwardUid !== undefined ? await loadOriginal(forwardUid, forwardFolder) : null;
+      const options = await composeOptions({ ...rest, original, forward });
       const draft = await withImapClient((client) => appendDraft(client, options), WRITE);
       return text(draftSummary(options, draft, mode));
     }

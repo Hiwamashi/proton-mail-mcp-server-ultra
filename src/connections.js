@@ -219,6 +219,11 @@ export async function loadAttachment(client, uid, loaded, index, folder) {
 
 let specialFolderCache = null;
 
+// Forget the resolved special-use folders, e.g. after a folder was created.
+export function resetFolderCache() {
+  specialFolderCache = null;
+}
+
 // Resolves special-use folders (\Drafts, \Trash, \Sent, ...) to their actual paths.
 export async function getSpecialFolder(client, specialUse, fallback) {
   if (!specialFolderCache) {

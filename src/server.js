@@ -5,6 +5,7 @@ import { CONFIG, assertCredentials, assertMode, logStartupConfig } from "./confi
 import { shutdownConnections } from "./connections.js";
 import { registerMailboxTools } from "./tools/mailbox.js";
 import { registerComposeTools } from "./tools/compose.js";
+import { registerLabelTools } from "./tools/labels.js";
 
 assertMode();
 assertCredentials();
@@ -13,6 +14,7 @@ logStartupConfig();
 const server = new McpServer({ name: "proton-mail", version: "1.0.0" }, { instructions: serverInstructions(CONFIG.mode) });
 registerMailboxTools(server);
 registerComposeTools(server);
+registerLabelTools(server);
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.once(signal, () => {

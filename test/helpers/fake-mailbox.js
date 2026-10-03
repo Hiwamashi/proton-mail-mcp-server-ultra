@@ -2,6 +2,9 @@
 // thread and search code uses: list, getMailboxLock, search (with an evaluator for the criteria
 // objects imapflow accepts), fetch and fetchOne. Every search records its criteria in `calls.search`.
 //
+// Write methods (messageMove, messageFlagsAdd/Remove, messageDelete, messageCopy, mailboxCreate)
+// change the folders in place and record their arguments in `calls.writes`.
+//
 // A message is described by { uid, messageId, inReplyTo, references, date, subject, from, to, cc,
 // flags, size, attachment: "attachment" | "inline" | undefined, body }.
 
@@ -45,6 +48,8 @@ function matches(m, criteria) {
     switch (key) {
       case "all":
         return true;
+      case "uid":
+        return [].concat(value).map(Number).includes(m.uid);
       case "or":
         return value.some((sub) => matches(m, sub));
       case "header":
@@ -100,7 +105,9 @@ function toFetched(m, query) {
 
 // folders: { [path]: { specialUse?, messages: [...] } }
 export function fakeMailbox(folders) {
-  const calls = { search: [], fetch: [], locks: [], fetchedUids: [] };
+  const calls = { search: [], fetch: [], locks: [], fetchedUids: [], writes: [] };
+  const uidList = (range) => String(range).split(",").map(Number);
+  const nextUid = (path) => Math.max(0, ...folders[path].messages.map((m) => m.uid)) + 1;
   const client = {
     calls,
     mailbox: null,
@@ -125,6 +132,51 @@ export function fakeMailbox(folders) {
       const uids = String(range).split(",").map(Number);
       calls.fetchedUids.push(...uids);
       for (const m of client.current()) if (uids.includes(m.uid)) yield toFetched(m, query);
+    },
+    async messageMove(range, destination) {
+      calls.writes.push({ op: "move", folder: client.mailbox.path, range, destination });
+      if (!folders[destination]) return false;
+      const uidMap = new Map();
+      for (const uid of uidList(range)) {
+        const list = client.current();
+        const index = list.findIndex((m) => m.uid === uid);
+        if (index === -1) continue;
+        const [message] = list.splice(index, 1);
+        const target = nextUid(destination);
+        folders[destination].messages.push({ ...message, uid: target });
+        uidMap.set(uid, target);
+      }
+      return { path: client.mailbox.path, destination, uidMap };
+    },
+    async messageCopy(range, destination) {
+      calls.writes.push({ op: "copy", folder: client.mailbox.path, range, destination });
+      if (!folders[destination]) return false;
+      for (const uid of uidList(range)) {
+        const message = client.current().find((m) => m.uid === uid);
+        if (message) folders[destination].messages.push({ ...message, uid: nextUid(destination) });
+      }
+      return { path: client.mailbox.path, destination };
+    },
+    async messageFlagsAdd(range, flags) {
+      calls.writes.push({ op: "flagsAdd", folder: client.mailbox.path, range, flags });
+      for (const m of client.current()) if (uidList(range).includes(m.uid)) m.flags = [...new Set([...(m.flags || []), ...flags])];
+      return true;
+    },
+    async messageFlagsRemove(range, flags) {
+      calls.writes.push({ op: "flagsRemove", folder: client.mailbox.path, range, flags });
+      for (const m of client.current()) if (uidList(range).includes(m.uid)) m.flags = (m.flags || []).filter((f) => !flags.includes(f));
+      return true;
+    },
+    async messageDelete(range) {
+      calls.writes.push({ op: "delete", folder: client.mailbox.path, range });
+      folders[client.mailbox.path].messages = client.current().filter((m) => !uidList(range).includes(m.uid));
+      return true;
+    },
+    async mailboxCreate(path) {
+      calls.writes.push({ op: "create", path });
+      if (folders[path]) throw new Error("Mailbox already exists");
+      folders[path] = { messages: [] };
+      return { path, created: true };
     },
     async fetchOne(uid, query) {
       const m = client.current().find((x) => x.uid === Number(uid));

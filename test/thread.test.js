@@ -137,7 +137,7 @@ test("includes quote-stripped bodies within the budget", async () => {
 test("does not change flags of unread messages", async () => {
   const client = chain();
   await getThread(client, { uid: 2, folder: "INBOX" });
-  assert.equal(typeof client.messageFlagsAdd, "undefined", "the fake has no flag methods; any call would throw");
+  assert.deepEqual(client.calls.writes, [], "no flag change or other write");
   for (const f of client.calls.fetch) assert.equal(f.query.markAsSeen, undefined);
 });
 
