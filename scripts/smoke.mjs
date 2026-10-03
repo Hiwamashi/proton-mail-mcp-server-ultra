@@ -24,6 +24,7 @@ async function call(name, args = {}) {
   return { result, text: first, json: () => JSON.parse(first) };
 }
 
+console.log("server version:", client.getServerVersion()?.version, "| package.json:", JSON.parse(await (await import("node:fs/promises")).readFile(new URL("../package.json", import.meta.url), "utf-8")).version);
 console.log("instructions:", client.getInstructions());
 const { tools } = await client.listTools();
 console.log("tools:", tools.map((t) => t.name).join(", "));

@@ -115,7 +115,11 @@ export function fakeMailbox(folders) {
       return Object.entries(folders).map(([path, f]) => ({ path, specialUse: f.specialUse, status: { messages: f.messages.length } }));
     },
     async getMailboxLock(path) {
-      if (!folders[path]) throw new Error(`fake-mailbox: no folder ${path}`);
+      if (!folders[path]) {
+        const error = new Error(`Mailbox doesn't exist: ${path}`);
+        error.serverResponseCode = "NONEXISTENT";
+        throw error;
+      }
       calls.locks.push(path);
       client.mailbox = { path, exists: folders[path].messages.length, uidValidity: folders[path].uidValidity ?? 1 };
       return { release() {} };

@@ -1,4 +1,5 @@
 import { compile } from "html-to-text";
+import { QUOTE_HEADER_PATTERNS } from "./locale.js";
 
 // Zero-width and other invisible characters that newsletters use as preheader padding.
 const INVISIBLE_CHARS = /[​-‍⁠﻿­͏؜᠎ ]/g;
@@ -39,12 +40,7 @@ export function htmlToText(html, { includeLinks = false } = {}) {
   return normalizeText((includeLinks ? converters.withLinks : converters.plain)(html || ""));
 }
 
-// Patterns that start a quoted reply history. Matched against single lines.
-const QUOTE_HEADER_PATTERNS = [
-  /^\s*(Am|On|Le|El|Il)\s.{4,200}\s(schrieb|wrote|a écrit|escribió|ha scritto)\b.*:\s*$/i,
-  /^\s*-{2,}\s*(Original Message|Ursprüngliche Nachricht|Originalnachricht|Forwarded message|Weitergeleitete Nachricht)\s*-{2,}/i,
-  /^\s*_{10,}\s*$/,
-];
+// Patterns that start a quoted reply history (all locales, see locale.js) are matched against single lines.
 
 // Outlook-style header block: "Von:" followed shortly by "Gesendet:"/"An:"/"Betreff:".
 function isOutlookHeaderBlock(lines, index) {

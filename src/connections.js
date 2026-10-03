@@ -37,11 +37,31 @@ function createImapClient() {
   return client;
 }
 
+// Test seam: tests replace the client and transport factories with fakes, so the connection and
+// retry logic runs without a Bridge. Production code never calls these setters.
+let imapClientFactory = createImapClient;
+let smtpTransportFactory = () => createSmtpTransport();
+
+export function setImapClientFactory(factory) {
+  resetImapClient();
+  imapClientFactory = factory || createImapClient;
+}
+
+export function setSmtpTransportFactory(factory) {
+  smtpTransportFactory = factory || (() => createSmtpTransport());
+}
+
 function isRetryableImapError(error) {
   const message = `${error?.message || error || ""}`;
   return /not connected|connection.*closed|socket.*closed|socket.*destroyed|timed out|ECONNRESET|EPIPE|User is authenticated but not connected/i.test(
     message
   );
+}
+
+// "Mailbox does not exist" from SELECT, APPEND and the like (imapflow sets serverResponseCode).
+export function isMissingMailboxError(error) {
+  if (error?.serverResponseCode === "NONEXISTENT") return true;
+  return /mailbox (doesn't|does not) exist|no such (mailbox|folder)|unknown mailbox|mailbox not found/i.test(`${error?.responseText || ""} ${error?.message || ""}`);
 }
 
 function closeQuietly(client) {
@@ -84,7 +104,7 @@ async function getImapClient() {
   if (imapClient?.usable) return imapClient;
   if (!imapClientPromise) {
     imapClientPromise = (async () => {
-      const client = createImapClient();
+      const client = imapClientFactory();
       try {
         await client.connect();
         imapClient = client;
@@ -105,6 +125,24 @@ export async function withImapClient(operation, { idempotent = true } = {}) {
     scheduleImapDisconnect();
     return result;
   } catch (error) {
+    if (client.usable && isMissingMailboxError(error)) {
+      // A resolved folder may have been renamed: forget the resolution. A read gets one more attempt
+      // with freshly resolved folders; a write returns the error (it may have partly happened).
+      resetFolderCache(client);
+      if (!idempotent) {
+        scheduleImapDisconnect();
+        throw error;
+      }
+      try {
+        const result = await operation(client);
+        scheduleImapDisconnect();
+        return result;
+      } catch (retryError) {
+        if (!client.usable || isRetryableImapError(retryError)) resetImapClient(client);
+        else scheduleImapDisconnect();
+        throw retryError;
+      }
+    }
     if (client.usable && !isRetryableImapError(error)) {
       scheduleImapDisconnect();
       throw error;
@@ -217,25 +255,27 @@ export async function loadAttachment(client, uid, loaded, index, folder) {
   return fromFull;
 }
 
-let specialFolderCache = null;
+// Resolved special-use folders, per connection: a new connection starts empty, so a folder renamed in
+// Proton Mail is picked up after a reconnect.
+const folderCaches = new WeakMap();
 
-// Forget the resolved special-use folders, e.g. after a folder was created.
-export function resetFolderCache() {
-  specialFolderCache = null;
+// Forget the resolved special-use folders of a connection, e.g. after a folder was created or a
+// resolved folder turned out not to exist.
+export function resetFolderCache(client) {
+  if (client) folderCaches.delete(client);
 }
 
 // Resolves special-use folders (\Drafts, \Trash, \Sent, ...) to their actual paths.
 export async function getSpecialFolder(client, specialUse, fallback) {
-  if (!specialFolderCache) {
-    const folders = await client.list();
-    specialFolderCache = {};
-    for (const folder of folders) {
-      if (folder.specialUse && !specialFolderCache[folder.specialUse]) {
-        specialFolderCache[folder.specialUse] = folder.path;
-      }
+  let cache = folderCaches.get(client);
+  if (!cache) {
+    cache = {};
+    for (const folder of await client.list()) {
+      if (folder.specialUse && !cache[folder.specialUse]) cache[folder.specialUse] = folder.path;
     }
+    folderCaches.set(client, cache);
   }
-  return specialFolderCache[specialUse] || fallback;
+  return cache[specialUse] || fallback;
 }
 
 function createSmtpTransport() {
@@ -252,7 +292,7 @@ function createSmtpTransport() {
 // Every send uses a fresh connection to the local Bridge and is never retried: nodemailer reports
 // socket errors the same way before and after the message data, so a retry could send twice.
 export async function sendMail(mailOptions) {
-  const transport = createSmtpTransport();
+  const transport = smtpTransportFactory();
   try {
     return await transport.sendMail(mailOptions);
   } finally {

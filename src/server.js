@@ -1,17 +1,19 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { serverInstructions } from "./modes.js";
-import { CONFIG, assertCredentials, assertMode, logStartupConfig } from "./config.js";
+import { SERVER_VERSION } from "./version.js";
+import { CONFIG, assertCredentials, assertMode, assertLocale, logStartupConfig } from "./config.js";
 import { shutdownConnections } from "./connections.js";
 import { registerMailboxTools } from "./tools/mailbox.js";
 import { registerComposeTools } from "./tools/compose.js";
 import { registerLabelTools } from "./tools/labels.js";
 
 assertMode();
+assertLocale();
 assertCredentials();
 logStartupConfig();
 
-const server = new McpServer({ name: "proton-mail", version: "1.0.0" }, { instructions: serverInstructions(CONFIG.mode) });
+const server = new McpServer({ name: "proton-mail", version: SERVER_VERSION }, { instructions: serverInstructions(CONFIG.mode) });
 registerMailboxTools(server);
 registerComposeTools(server);
 registerLabelTools(server);

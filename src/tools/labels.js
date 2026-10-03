@@ -149,7 +149,7 @@ export async function createFolder(client, name, type) {
   const existing = (await client.list()).find((f) => f.path.toLowerCase() === path.toLowerCase());
   if (existing) throw new Error(`"${existing.path}" already exists.`);
   await client.mailboxCreate(path);
-  resetFolderCache();
+  resetFolderCache(client);
   return { success: true, path, type };
 }
 

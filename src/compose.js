@@ -1,5 +1,7 @@
-import MailComposer from "nodemailer/lib/mail-composer/index.js";
+import MailComposer from "nodemailer/lib/mail-composer";
 import { addressList } from "./content.js";
+import { CONFIG } from "./config.js";
+import { LOCALES, formatQuoteDate } from "./locale.js";
 
 function formatOne(a) {
   return a.name ? `"${a.name.replace(/"/g, "'")}" <${a.address}>` : a.address;
@@ -54,17 +56,14 @@ export function referencesFor(original) {
   return refs.length ? refs.join(" ") : undefined;
 }
 
-const dateFormatter = new Intl.DateTimeFormat("de-DE", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Europe/Berlin",
-});
+// Language and time zone of generated quote lines and forward headers (PROTON_MCP_LOCALE,
+// PROTON_MCP_TIMEZONE). Tests pass them explicitly.
+const quoteSettings = () => ({ locale: CONFIG.locale || "de", timeZone: CONFIG.timeZone || "Europe/Berlin" });
 
-export function quoteAttribution(original) {
+export function quoteAttribution(original, { locale, timeZone } = quoteSettings()) {
   const sender = addressList(original.from)[0];
-  const who = sender ? (sender.name ? `${sender.name} <${sender.address}>` : sender.address) : "unbekannt";
-  const when = original.date ? dateFormatter.format(original.date) : "";
-  return when ? `Am ${when} schrieb ${who}:` : `${who} schrieb:`;
+  const who = sender ? (sender.name ? `${sender.name} <${sender.address}>` : sender.address) : LOCALES[locale].unknownSender;
+  return LOCALES[locale].attribution(formatQuoteDate(original.date, locale, timeZone), who);
 }
 
 // Forwarding keeps an existing forward prefix (Fwd:, Fw:, WG:) instead of stacking another one.
@@ -73,8 +72,6 @@ export function forwardSubject(subject) {
   return /^(fwd?|wg)\s*:/i.test(s) ? s : `Fwd: ${s}`;
 }
 
-const FORWARD_SEPARATOR = "---------- Weitergeleitete Nachricht ----------";
-
 function addressLine(field) {
   return addressList(field)
     .map((a) => (a.name ? `${a.name} <${a.address}>` : a.address))
@@ -82,24 +79,27 @@ function addressLine(field) {
 }
 
 // Header lines of the forwarded original, in the language of the reply quote. Empty Cc is left out.
-function forwardHeaderLines(original) {
+function forwardHeaderLines(original, { locale, timeZone }) {
+  const labels = LOCALES[locale].forward;
   const lines = [
-    ["Von", addressLine(original.from)],
-    ["Datum", original.date ? dateFormatter.format(original.date) : ""],
-    ["Betreff", original.subject || ""],
-    ["An", addressLine(original.to)],
-    ["Cc", addressLine(original.cc)],
+    [labels.from, addressLine(original.from)],
+    [labels.date, formatQuoteDate(original.date, locale, timeZone)],
+    [labels.subject, original.subject || ""],
+    [labels.to, addressLine(original.to)],
+    [labels.cc, addressLine(original.cc), true],
   ];
-  return lines.filter(([label, value]) => value || label !== "Cc");
+  return lines.filter(([, value, optional]) => value || !optional);
 }
 
-export function forwardHeaderText(original) {
-  return [FORWARD_SEPARATOR, ...forwardHeaderLines(original).map(([label, value]) => `${label}: ${value}`)].join("\n");
+export function forwardHeaderText(original, settings = quoteSettings()) {
+  const { separator } = LOCALES[settings.locale].forward;
+  return [separator, ...forwardHeaderLines(original, settings).map(([label, value]) => `${label}: ${value}`)].join("\n");
 }
 
-export function forwardHeaderHtml(original) {
-  const rows = forwardHeaderLines(original).map(([label, value]) => `<b>${label}:</b> ${escapeHtml(value)}<br>`);
-  return `${escapeHtml(FORWARD_SEPARATOR)}<br>\n${rows.join("\n")}`;
+export function forwardHeaderHtml(original, settings = quoteSettings()) {
+  const { separator } = LOCALES[settings.locale].forward;
+  const rows = forwardHeaderLines(original, settings).map(([label, value]) => `<b>${label}:</b> ${escapeHtml(value)}<br>`);
+  return `${escapeHtml(separator)}<br>\n${rows.join("\n")}`;
 }
 
 export function quoteText(originalBody, attribution) {

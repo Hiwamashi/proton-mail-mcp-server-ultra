@@ -85,3 +85,10 @@ test("a tool without a modes list is a bug and does not fail open", () => {
   assert.equal(toolAvailable(["drafts"], "read-only"), false);
   assert.equal(toolAvailable(["drafts"], "drafts"), true);
 });
+
+test("list_emails states arrival order and points to search_emails for date order", () => {
+  const { config } = register("read-only").get("list_emails");
+  assert.match(config.description, /most recently added to a folder/);
+  assert.match(config.description, /order follows arrival in the folder/);
+  assert.match(config.description, /search_emails/);
+});

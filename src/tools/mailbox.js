@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { withImapClient, withMailbox, loadMessage, loadAttachment, getSpecialFolder, NotFoundError } from "../connections.js";
+import { withImapClient, withMailbox, loadMessage, loadAttachment, getSpecialFolder, resetFolderCache, NotFoundError } from "../connections.js";
 import { messageCache } from "../message-cache.js";
 import { extractBody, stripQuoted, paginate, formatAddresses, describeAttachments, formatSize, formatDate } from "../content.js";
 import { attachmentToContent } from "../attachments.js";
@@ -189,7 +189,11 @@ export async function deleteMessages(client, folder, trash, { list, bulk }, mode
     if (!deleted) throw new Error(`Could not delete ${processed.length === 1 ? `UID ${processed[0]}` : `${processed.length} emails`} in "${folder}".`);
   } else {
     const result = await client.messageMove(processed.join(","), trash, { uid: true });
-    if (!result) throw new Error(`Could not move ${processed.length === 1 ? `UID ${processed[0]}` : `${processed.length} emails`} from "${folder}" to Trash.`);
+    if (!result) {
+      // imapflow reports a failed MOVE as false, also when the Trash folder was renamed: resolve it anew next time.
+      resetFolderCache(client);
+      throw new Error(`Could not move ${processed.length === 1 ? `UID ${processed[0]}` : `${processed.length} emails`} from "${folder}" to Trash.`);
+    }
   }
   for (const u of processed) messageCache.invalidate(folder, u);
   const outcome = inTrash ? { deletedPermanently: true } : { movedTo: trash };
@@ -226,7 +230,7 @@ export function registerMailboxTools(server, { mode = CONFIG.mode } = {}) {
     {
       modes: MODES,
       description:
-        "List the newest emails in a folder, newest first. Returns UID, date, from, to, subject, read/flag state and whether there are attachments. Use offset to page further back.",
+        "List the emails most recently added to a folder; each page is sorted by date, newest first. Returns UID, date, from, to, subject, read/flag state and whether there are attachments. Use offset to page further back. The order follows arrival in the folder, not the sent date: an old email just moved here appears first, and in \"All Mail\" the order can look mixed. For date order across a folder use search_emails (e.g. with since).",
       inputSchema: {
         folder: folderArg(),
         limit: z.number().int().min(1).max(100).default(20).describe("Number of emails (default 20, max 100)"),

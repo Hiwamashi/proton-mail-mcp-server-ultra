@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { parseLocale, parseTimeZone } from "./locale.js";
 
 const CREDENTIALS_PATH = join(homedir(), ".proton-bridge-credentials");
 
@@ -101,9 +102,27 @@ function loadConfig() {
     modeError = err.message;
   }
 
+  // Like the mode: invalid values are reported by assertLocale() at startup, not on import.
+  const startupErrors = [];
+  let locale;
+  let timeZone;
+  try {
+    locale = parseLocale(get("PROTON_MCP_LOCALE"));
+  } catch (err) {
+    startupErrors.push(err.message);
+  }
+  try {
+    timeZone = parseTimeZone(get("PROTON_MCP_TIMEZONE"));
+  } catch (err) {
+    startupErrors.push(err.message);
+  }
+
   return {
     mode,
     modeError,
+    locale,
+    timeZone,
+    localeErrors: startupErrors,
     attachmentRoots: parseAttachmentRoots(get("PROTON_MCP_ATTACHMENT_ROOTS"), attachmentDir),
     host: get("PROTON_BRIDGE_HOST", "127.0.0.1"),
     imapPort: parseInt(get("PROTON_BRIDGE_IMAP_PORT", "1143"), 10),
@@ -146,9 +165,17 @@ export function assertMode() {
   }
 }
 
+export function assertLocale() {
+  if (CONFIG.localeErrors.length) {
+    for (const message of CONFIG.localeErrors) console.error(`Error: ${message}`);
+    process.exit(1);
+  }
+}
+
 // stderr only — stdout is the MCP channel.
 export function logStartupConfig() {
   const roots = CONFIG.attachmentRoots === "*" ? "* (unrestricted)" : CONFIG.attachmentRoots.join(", ");
   console.error(`proton-mail-mcp: mode=${CONFIG.mode}`);
+  console.error(`proton-mail-mcp: locale=${CONFIG.locale} timezone=${CONFIG.timeZone}`);
   console.error(`proton-mail-mcp: attachment roots=${roots}`);
 }
