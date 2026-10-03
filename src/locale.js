@@ -86,6 +86,16 @@ export const QUOTE_HEADER_PATTERNS = [
       .join("|")})(\\s.*)?\\s?:\\s*$`,
     "i"
   ),
+  // Attribution without a date ("Max <max@x.de> wrote:", "unknown wrote:"): only with an address or
+  // the unknown-sender word in front, so ordinary sentences ending in "wrote:" are not cut.
+  new RegExp(
+    `^\\s*(?:[^<>\\n]{0,100}<[^\\s<>@]+@[^\\s<>]+>|[^\\s<>@]+@[^\\s<>]+|${Object.values(LOCALES)
+      .map((l) => escape(l.unknownSender))
+      .join("|")})\\s(${Object.values(LOCALES)
+      .map((l) => escape(l.wrote))
+      .join("|")})\\s?:\\s*$`,
+    "i"
+  ),
   new RegExp(
     `^\\s*-{2,}\\s*(Original Message|Ursprüngliche Nachricht|Originalnachricht|${Object.values(LOCALES)
       .map((l) => escape(l.forward.separator.replace(/^-+\s*|\s*-+$/g, "")))

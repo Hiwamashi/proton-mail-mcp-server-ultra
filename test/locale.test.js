@@ -75,3 +75,18 @@ test("the server stops at startup on an invalid time zone or locale, naming the 
   assert.equal(locale.status, 1);
   assert.match(locale.stderr, /PROTON_MCP_LOCALE "nl"/);
 });
+
+for (const locale of LOCALE_NAMES) {
+  test(`round trip ${locale} without date: the attribution is still removed`, () => {
+    const settings = { locale, timeZone: "Europe/Berlin" };
+    for (const orig of [{ from: original.from }, { from: { value: [{ address: "max@example.com" }] } }, {}]) {
+      const reply = `Neue Antwort.\n\n${quoteText("Altes Zitat", quoteAttribution(orig, settings))}`;
+      assert.deepEqual(stripQuoted(reply), { text: "Neue Antwort.", removed: true }, quoteAttribution(orig, settings));
+    }
+  });
+}
+
+test("ordinary sentences ending in 'wrote:' without an address are not cut", () => {
+  const text = "Hallo,\n\nDazu hat Max wrote:\nnoch etwas";
+  assert.deepEqual(stripQuoted(text), { text, removed: false });
+});

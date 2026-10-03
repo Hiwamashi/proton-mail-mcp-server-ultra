@@ -60,7 +60,8 @@ function isRetryableImapError(error) {
 
 // "Mailbox does not exist" from SELECT, APPEND and the like (imapflow sets serverResponseCode).
 export function isMissingMailboxError(error) {
-  if (error?.serverResponseCode === "NONEXISTENT") return true;
+  // TRYCREATE: what RFC 3501 prescribes for APPEND/COPY into a mailbox that does not exist.
+  if (error?.serverResponseCode === "NONEXISTENT" || error?.serverResponseCode === "TRYCREATE") return true;
   return /mailbox (doesn't|does not) exist|no such (mailbox|folder)|unknown mailbox|mailbox not found/i.test(`${error?.responseText || ""} ${error?.message || ""}`);
 }
 

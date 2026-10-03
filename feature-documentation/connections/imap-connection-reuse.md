@@ -88,7 +88,7 @@ const trash = await getSpecialFolder(client, "\\Trash", "Trash");
 ```
 
 Der Cache gilt **pro Verbindung** (`WeakMap` mit dem Client als Schlüssel). Eine neue Verbindung beginnt leer, ein in Proton umbenannter Ordner wird also nach einem Reconnect gefunden. Außerdem wird er verworfen (`resetFolderCache(client)`):
-- wenn eine Operation mit „Mailbox existiert nicht“ scheitert (`isMissingMailboxError`: `serverResponseCode` `NONEXISTENT` oder entsprechender Text). Ein **lesender** Vorgang wird dann einmal mit neu aufgelösten Ordnern wiederholt, ein **schreibender** liefert den Fehler (er könnte teilweise passiert sein); der nächste Aufruf löst neu auf.
+- wenn eine Operation mit „Mailbox existiert nicht“ scheitert (`isMissingMailboxError`: `serverResponseCode` `NONEXISTENT` oder `TRYCREATE`, oder entsprechender Text). Ein **lesender** Vorgang wird dann einmal mit neu aufgelösten Ordnern wiederholt, ein **schreibender** liefert den Fehler (er könnte teilweise passiert sein); der nächste Aufruf löst neu auf.
 - wenn `delete_email` beim Verschieben in den Papierkorb `false` zurückbekommt (imapflow meldet ein gescheitertes MOVE so, auch bei umbenanntem Papierkorb).
 - nach `create_folder`.
 
@@ -211,7 +211,7 @@ const trash = await getSpecialFolder(client, "\\Trash", "Trash");
 ```
 
 The cache applies **per connection** (`WeakMap` keyed by the client). A new connection starts empty, so a folder renamed in Proton is found after a reconnect. In addition it is dropped (`resetFolderCache(client)`):
-- when an operation fails with "mailbox does not exist" (`isMissingMailboxError`: `serverResponseCode` `NONEXISTENT` or matching text). A **read** is then attempted once more with freshly resolved folders; a **write** returns the error (it may have partly happened); the next call resolves anew.
+- when an operation fails with "mailbox does not exist" (`isMissingMailboxError`: `serverResponseCode` `NONEXISTENT` or `TRYCREATE`, or matching text). A **read** is then attempted once more with freshly resolved folders; a **write** returns the error (it may have partly happened); the next call resolves anew.
 - when `delete_email` gets `false` back from the move to Trash (imapflow reports a failed MOVE that way, also for a renamed Trash).
 - after `create_folder`.
 

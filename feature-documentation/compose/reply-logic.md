@@ -76,7 +76,7 @@ Falls kein Datum: `Max Mustermann <max@example.com> schrieb:` (bzw. `wrote:` …
 
 Falls kein Sender: `unbekannt schrieb:` (`unknown wrote:`, `inconnu a écrit :`, `desconocido escribió:`, `sconosciuto ha scritto:`).
 
-Dieselben Einstellungen gelten für den Kopfblock beim Weiterleiten (siehe `forward-email.md`). `stripQuoted()` erkennt die Zitatzeilen und Weiterleitungs-Trennzeilen **aller** Sprachen, unabhängig von der Einstellung. Vorher wurde die spanische Zeile nicht erkannt (ein `\b` hinter „escribió“ greift in JavaScript nicht); ein Round-Trip-Test je Sprache sichert das jetzt ab.
+Dieselben Einstellungen gelten für den Kopfblock beim Weiterleiten (siehe `forward-email.md`). `stripQuoted()` erkennt die Zitatzeilen und Weiterleitungs-Trennzeilen **aller** Sprachen, unabhängig von der Einstellung, auch die Form ohne Datum. Diese gilt nur dann als Zitatbeginn, wenn vor dem Verb eine Mailadresse oder das Wort für einen unbekannten Absender steht; ein normaler Satz, der auf „wrote:“ endet, bleibt stehen. Vorher wurde die spanische Zeile nicht erkannt (ein `\b` hinter „escribió“ greift in JavaScript nicht); ein Round-Trip-Test je Sprache sichert das jetzt ab.
 
 ### `quoteText(originalBody, attribution)`
 
@@ -203,7 +203,7 @@ If no date: `Max Mustermann <max@example.com> schrieb:` (or `wrote:` …).
 
 If no sender: `unbekannt schrieb:` (`unknown wrote:`, `inconnu a écrit :`, `desconocido escribió:`, `sconosciuto ha scritto:`).
 
-The same settings apply to the header block when forwarding (see `forward-email.md`). `stripQuoted()` recognizes the attribution lines and forward separator lines of **all** languages, regardless of the setting. Previously the Spanish line was not recognized (a `\b` after "escribió" does not match in JavaScript); a round-trip test per language now covers this.
+The same settings apply to the header block when forwarding (see `forward-email.md`). `stripQuoted()` recognizes the attribution lines and forward separator lines of **all** languages, regardless of the setting, including the form without a date. That form only counts as the start of a quote when an email address or the unknown-sender word comes before the verb; an ordinary sentence ending in "wrote:" stays. Previously the Spanish line was not recognized (a `\b` after "escribió" does not match in JavaScript); a round-trip test per language now covers this.
 
 ### `quoteText(originalBody, attribution)`
 
